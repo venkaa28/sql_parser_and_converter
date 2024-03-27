@@ -1,0 +1,8 @@
+{
+    "query_1": "SELECT COUNT(*) FROM hits;",
+    "query_2": "SELECT 'user_id', COUNT(*) FROM hits WHERE 'clicks' > 0 GROUP BY 'user_id';",
+    "query_3": "SELECT 1, 'URL' FROM hits LIMIT 10;",
+    "query_4": "INSERT INTO hits SELECT * FROM partial_hits_1 AS p1 JOIN partial_hits_2 AS p2 ON p1.id = p2.id;",
+    "query_5": "CREATE TABLE hits (id UInt64, timestamp DateTime, user_id UInt64, event_type String, url String, session_id String, user_agent String, country String, ip String, referrer String, clicks UInt64, impressions UInt64, revenue Decimal(10, 2)) PRIMARY KEY id;"
+}
+  
