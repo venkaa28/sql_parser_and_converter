@@ -3,38 +3,43 @@ mod parser;
 fn main() {
     let query_1 = "SELECT COUNT(*) FROM hits;";
     println!("{}", query_1);
-    let query_2 = "SELECT \"user_id\", COUNT(*) FROM hits WHERE \"clicks\" > 0 GROUP BY \"user_id\";";
-    println!("{}", query_2);
-    let query_3 = "SELECT 1, \"URL\" FROM hits LIMIT 10;";
-    println!("{}", query_2);
-
-    // Example usage of the parse_handler function.
+    println!("");
     match parser::parse_handler(query_1) {
         Ok((remaining, ast)) => {
             println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
         },
-        Err(_) => println!("No valid SQL query found"),
+        Err(e) => println!("No valid SQL query found\n  {:?}", e),
     }
+    println!("");
 
-    // match parser::parse_select_query(query_1) {
-    //     Ok((remaining, ast)) => {
-    //         println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
-    //     },
-    //     Err(e) => println!("Error: {:?}", e),
-    // }
+    let query_2 = "SELECT \"user_id\", COUNT(*) FROM hits WHERE \"clicks\" > 0 GROUP BY \"user_id\";";
+    println!("{}", query_2);
+    println!("");
+    match parser::parse_handler(query_2) {
+        Ok((remaining, ast)) => {
+            println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
+        },
+        Err(e) => println!("No valid SQL query found\n  {:?}", e),
+    }
+    println!("");
 
-   
-    // match parser::parse_select_query(query_2) {
-    //     Ok((remaining, ast)) => {
-    //         println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
-    //     },
-    //     Err(e) => println!("Error: {:?}", e),
-    // }
+    let query_3 = "SELECT 1, \"URL\" FROM hits LIMIT 10;";
+    println!("{}", query_3);
+    match parser::parse_handler(query_3) {
+        Ok((remaining, ast)) => {
+            println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
+        },
+        Err(e) => println!("No valid SQL query found\n  {:?}", e),
+    }
+    println!("");
 
-    // match parser::parse_select_query(query_3) {
-    //     Ok((remaining, ast)) => {
-    //         println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
-    //     },
-    //     Err(e) => println!("Error: {:?}", e),
-    // }
+    let query_4 = "SELECT SELECT, \"URL\" FROM hits LIMIT 10;";
+    println!("{}", query_3);
+    match parser::parse_handler(query_4) {
+        Ok((remaining, ast)) => {
+            println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
+        },
+        Err(e) => println!("No valid SQL query found\n  {:?}", e),
+    }
+    println!("");
 }

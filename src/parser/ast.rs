@@ -10,8 +10,8 @@ pub struct SelectStatement {
     pub columns: Vec<Column>,
     pub from: String,
     pub where_clause: Option<WhereClause>,
-    pub group_by: Vec<Column>,
-    pub limit: Option<u32>,
+    pub group_by: Option<Vec<Column>>,
+    pub limit: Option<i32>,
     pub end_of_statement: Option<char>,
 }
 
@@ -33,7 +33,9 @@ pub enum Column {
     Star,
     Name(String),
     Function(Function),
+    Number(i32)
 }
+
 #[derive(Debug, PartialEq)]
 pub struct Function {
     pub func: AggregateFunction,
@@ -53,7 +55,7 @@ pub struct WhereClause {
 
 #[derive(Debug, PartialEq)]
 pub enum Condition {
-    GreaterThan { column: String, value: i32 }, // Simplification for the example
+    GreaterThan { column: Column, value: i32 }, // Simplification for the example
     // Add other conditions as needed
 }
 

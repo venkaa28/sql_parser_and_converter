@@ -1,8 +1,8 @@
 use nom::{
     branch::alt,
-    character::complete::{alpha1, alphanumeric1, multispace0, char, none_of},
-    combinator::{map, recognize, opt},
-    sequence::{delimited, pair, preceded, tuple},
+    character::complete::{alpha1, alphanumeric1, multispace0, char, none_of, digit1},
+    combinator::{map, map_res, recognize, opt},
+    sequence::{delimited, pair, preceded, tuple, terminated},
     IResult, 
     bytes::complete::{tag_no_case, tag, escaped_transform},
     multi::{many0, separated_list0}
@@ -19,6 +19,14 @@ fn parse_keyword<'a>(input: &'a str, keyword: &'static str) -> IResult<&'a str, 
 /// Parses the '*' character.
 fn parse_star(input: &str) -> IResult<&str, Column> {
     map(char('*'), |_| Column::Star)(input)
+}
+
+/// Parses an integer number.
+fn parse_number(input: &str) -> IResult<&str, i32> {
+    map_res(
+        digit1,
+        |digit_str: &str| digit_str.parse::<i32>()
+    )(input)
 }
 
 /// Parses a string literal that is specifically a "word" enclosed in double quotes,
@@ -84,11 +92,11 @@ fn parse_selections(input: &str) -> IResult<&str, Vec<Column>> {
         map(parse_star, |star| vec![star]),
         // Branch to parse a list of comma-separated columns and COUNT functions.
         separated_list0(
-            preceded(multispace0, char(',')),
+            preceded(multispace0, terminated(char(','), multispace0)),
             alt((
                 parse_column_name,
                 parse_count_function,
-                // Add other column or function parsers here as needed.
+                map(parse_number, Column::Number)
             )),
         ),
     ))(input)
@@ -103,6 +111,49 @@ fn parse_from_clause(input: &str) -> IResult<&str, String> {
     Ok((input, table_name.to_string()))
 }
 
+fn parse_where_clause(input: &str) -> IResult<&str, Option<WhereClause>> {
+     //Can refactor to account for different conditions, hard coded > for simplicity
+    // Attempt to parse a WHERE clause, if present
+    opt(preceded(
+        // Match the "WHERE" keyword with surrounding optional whitespaces
+        |input| parse_keyword(input, "WHERE"),
+        // Parse the condition following the "WHERE" keyword
+        map(
+            tuple((
+                parse_column_name, // Parses the column name enclosed in quotes
+                multispace0,       // Optional spaces
+                char('>'),         // The '>' character for the "greater than" condition
+                multispace0,       // Optional spaces after '>'
+                parse_number,      // Parses the number following '>'
+            )),
+            // Construct a WhereClause from the parsed components
+            |(column, _, _, _, value)| WhereClause {
+                condition: Condition::GreaterThan {
+                    column,
+                    value,
+                },
+            },
+        ),
+    ))(input)
+}
+
+fn parse_group_by_clause(input: &str) -> IResult<&str, Option<Vec<Column>>> {
+    opt(preceded(
+        |input| parse_keyword(input, "GROUP BY"),
+        separated_list0(
+            preceded(multispace0, terminated(char(','), multispace0)),
+            parse_column_name
+        )
+    ))(input)
+}
+
+fn parse_limit_clause(input: &str) -> IResult<&str, Option<i32>> {
+    opt((preceded(
+        |input| parse_keyword(input, "LIMIT"),
+        parse_number
+    )))(input)
+}
+
 /// Parses an optional end of statement character (';'), preceded by zero or more whitespace characters.
 fn parse_end_of_statement(input: &str) -> IResult<&str, Option<char>> {
     opt(preceded(multispace0, char(';')))(input)
@@ -111,16 +162,19 @@ fn parse_end_of_statement(input: &str) -> IResult<&str, Option<char>> {
 fn parse_select_statement(input: &str) -> IResult<&str, Statement> {
     let (input, columns) = parse_selections(input)?;
     let (input, from) = parse_from_clause(input)?;
+    let (input, where_clause) = parse_where_clause(input)?;
+    let (input, group_by) = parse_group_by_clause(input)?;
+    let (input, limit) = parse_limit_clause(input)?;
     let (input, end_of_statement) = parse_end_of_statement(input)?;
     Ok((
         input,
         Statement::Select(SelectStatement {
             columns,
             from, 
-            where_clause: None, // Placeholder: implement actual parsing
-            group_by: Vec::new(), // Placeholder: implement actual parsing
-            limit: None, // Placeholder: implement actual parsing
-            end_of_statement, // Placeholder: consider implementing parsing for this
+            where_clause, 
+            group_by, 
+            limit, // Placeholder: implement actual parsing
+            end_of_statement,
         },
     )))
 }
@@ -136,7 +190,7 @@ fn parse_create_table_statement(input: &str) -> IResult<&str, String> {
 // Revised parse_handler function
 pub fn parse_handler(input: &str) -> IResult<&str, Statement> {
     alt((
-        |i| parse_keyword(i, "SELECT").and_then(|(next_input, _)| parse_select_statement(next_input)),
+        preceded(|i| parse_keyword(i, "SELECT"), parse_select_statement),
         // |i| parse_keyword(i, "INSERT INTO").and_then(|(next_input, _)| parse_insert_statement(next_input)),
         // |i| parse_keyword(i, "CREATE TABLE").and_then(|(next_input, _)| parse_create_table_statement(next_input)),
     ))(input)
