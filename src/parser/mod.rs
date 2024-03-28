@@ -1,11 +1,11 @@
 use nom::{
     branch::alt,
-    character::complete::{alpha1, alphanumeric1, multispace0, char, none_of, digit1},
-    combinator::{map, map_res, recognize, opt},
+    character::complete::{alpha1, alphanumeric1, multispace0, multispace1, char, none_of, digit1},
+    combinator::{map, map_res, recognize, opt, value},
     sequence::{delimited, pair, preceded, tuple, terminated},
     IResult, 
     bytes::complete::{tag_no_case, tag, escaped_transform},
-    multi::{many0, separated_list0}
+    multi::{many0, separated_list0, separated_list1}
 };
 
 mod ast;
@@ -52,11 +52,25 @@ fn parse_column_name(input: &str) -> IResult<&str, Column> {
 }
 
 /// Parses a table name.
-fn parse_table_name(input: &str) -> IResult<&str, &str> {
-    recognize(pair(
-        alt((alpha1, map(char('_'), |_| "_"))), 
-        many0(alt((alphanumeric1, map(char('_'), |_| "_")))),
-    ))(input)
+fn parse_table_name(input: &str) -> IResult<&str, Table> {
+    map(
+        tuple((
+            // Parse the table name
+            recognize(pair(
+                alt((alpha1, map(char('_'), |_| "_"))),
+                many0(alt((alphanumeric1, map(char('_'), |_| "_")))),
+            )),
+            // Parse an optional alias
+            opt(preceded(
+                |input| parse_keyword(input, "AS"),
+                parse_alias
+            )),
+        )),
+        |(name, alias): (&str, Option<&str>)| Table {
+            name: name.to_string(),
+            alias: alias.map(String::from),
+        },
+    )(input)
 }
 
 fn parse_aggregate_expression(input: &str) -> IResult<&str, String> {
@@ -103,38 +117,70 @@ fn parse_selections(input: &str) -> IResult<&str, Vec<Column>> {
 }
 
 /// Parses the FROM clause of a SQL query, extracting the table name.
-fn parse_from_clause(input: &str) -> IResult<&str, String> {
-    let (input, (_, table_name)) = tuple((
-        |input| parse_keyword(input, "FROM"),
-        parse_table_name,
-    ))(input)?;
-    Ok((input, table_name.to_string()))
+fn parse_from_clause(input: &str) -> IResult<&str, FromClause> {
+    let (input, _) = parse_keyword(input, "FROM")?;
+    let (input, table) = parse_table_name(input)?;
+
+    Ok((input, FromClause { table }))
+}
+
+// Parses an alias name
+fn parse_alias(input: &str) -> IResult<&str, &str> {
+    recognize(pair(
+        alt((alpha1, map(char('_'), |_| "_"))), 
+        many0(alt((alphanumeric1, map(char('_'), |_| "_")))),
+    ))(input)
+}
+
+fn parse_condition(input: &str) -> IResult<&str, Condition> {
+    alt((
+        // Parse "Greater Than" condition
+        map(
+            tuple((
+                parse_column_name,
+                multispace0,
+                char('>'),
+                multispace0,
+                parse_number,
+            )),
+            |(column, _, _, _, value)| Condition::GreaterThan { column, value },
+        ),
+        // Parse "Equal To" condition
+        map(
+            tuple((
+                parse_column_name,
+                multispace0,
+                char('='),
+                multispace0,
+                parse_column_name, // Assuming you want to compare two column names for equality
+            )),
+            |(val1, _, _, _, val2)| Condition::EqualTo { val1, val2 },
+        ),
+    ))(input)
 }
 
 fn parse_where_clause(input: &str) -> IResult<&str, Option<WhereClause>> {
-     //Can refactor to account for different conditions, hard coded > for simplicity
-    // Attempt to parse a WHERE clause, if present
     opt(preceded(
-        // Match the "WHERE" keyword with surrounding optional whitespaces
         |input| parse_keyword(input, "WHERE"),
-        // Parse the condition following the "WHERE" keyword
         map(
-            tuple((
-                parse_column_name, // Parses the column name enclosed in quotes
-                multispace0,       // Optional spaces
-                char('>'),         // The '>' character for the "greater than" condition
-                multispace0,       // Optional spaces after '>'
-                parse_number,      // Parses the number following '>'
-            )),
-            // Construct a WhereClause from the parsed components
-            |(column, _, _, _, value)| WhereClause {
-                condition: Condition::GreaterThan {
-                    column,
-                    value,
-                },
-            },
+            parse_condition,
+            |condition| WhereClause { condition },
         ),
     ))(input)
+}
+
+fn parse_join_clause(input: &str) -> IResult<&str, Option<JoinClause>> {
+    opt(map(
+        tuple((
+            preceded(|input| parse_keyword(input, "JOIN"), parse_table_name),
+            preceded(|input| parse_keyword(input, "ON"), parse_condition),
+        )),
+        |(table, condition)| JoinClause {
+            table,
+            condition,
+        }
+    ))(input)
+
 }
 
 fn parse_group_by_clause(input: &str) -> IResult<&str, Option<Vec<Column>>> {
@@ -148,10 +194,10 @@ fn parse_group_by_clause(input: &str) -> IResult<&str, Option<Vec<Column>>> {
 }
 
 fn parse_limit_clause(input: &str) -> IResult<&str, Option<i32>> {
-    opt((preceded(
+    opt(preceded(
         |input| parse_keyword(input, "LIMIT"),
         parse_number
-    )))(input)
+    ))(input)
 }
 
 /// Parses an optional end of statement character (';'), preceded by zero or more whitespace characters.
@@ -162,6 +208,7 @@ fn parse_end_of_statement(input: &str) -> IResult<&str, Option<char>> {
 fn parse_select_statement(input: &str) -> IResult<&str, Statement> {
     let (input, columns) = parse_selections(input)?;
     let (input, from) = parse_from_clause(input)?;
+    let (input, join) = parse_join_clause(input)?;
     let (input, where_clause) = parse_where_clause(input)?;
     let (input, group_by) = parse_group_by_clause(input)?;
     let (input, limit) = parse_limit_clause(input)?;
@@ -170,7 +217,8 @@ fn parse_select_statement(input: &str) -> IResult<&str, Statement> {
         input,
         Statement::Select(SelectStatement {
             columns,
-            from, 
+            from,
+            join, 
             where_clause, 
             group_by, 
             limit, // Placeholder: implement actual parsing
@@ -179,19 +227,38 @@ fn parse_select_statement(input: &str) -> IResult<&str, Statement> {
     )))
 }
 
-fn parse_insert_statement(input: &str) -> IResult<&str, String> {
-    Ok((input, "Parsed INSERT INTO statement".to_string()))
+fn parse_insert_statement(input: &str) -> IResult<&str, Statement> {
+    let (input, target_table) = parse_table_name(input)?;
+    // known bug this will succeed if the nested query is another INSERT INTO or CREATE TABLE
+    let (input, source) = parse_handler(input)?;
+    Ok((
+        input,
+        Statement::Insert(InsertStatement {
+            target_table,
+            source: Box::new(source)
+        },
+    )))
 }
 
-fn parse_create_table_statement(input: &str) -> IResult<&str, String> {
-    Ok((input, "Parsed CREATE TABLE statement".to_string()))
-}
+// fn parse_create_table_statement(input: &str) -> IResult<&str, Statement> {
+//     let (input, table_name) = parse_table_name(input)?;
+//     let (input, columns) = parse_columns(input)?;
+//     let (input, primary_key) = parse_primary_key(input)?;
+//     Ok((
+//         input,
+//         Statement::CreateTable(CreateTableStatement {
+//             table_name,
+//             columns,
+//             primary_key: primary_key.unwrap().to_string()
+//         },
+//     )))
+// }
 
 // Revised parse_handler function
 pub fn parse_handler(input: &str) -> IResult<&str, Statement> {
     alt((
         preceded(|i| parse_keyword(i, "SELECT"), parse_select_statement),
-        // |i| parse_keyword(i, "INSERT INTO").and_then(|(next_input, _)| parse_insert_statement(next_input)),
-        // |i| parse_keyword(i, "CREATE TABLE").and_then(|(next_input, _)| parse_create_table_statement(next_input)),
+        preceded(|i| parse_keyword(i, "INSERT INTO"), parse_insert_statement),
+        // preceded(|i| parse_keyword(i, "CREATE TABLE"), parse_create_table_statement),
     ))(input)
 }

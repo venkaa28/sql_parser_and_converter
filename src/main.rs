@@ -33,8 +33,8 @@ fn main() {
     }
     println!("");
 
-    let query_4 = "SELECT SELECT, \"URL\" FROM hits LIMIT 10;";
-    println!("{}", query_3);
+    let query_4 = "INSERT INTO hits SELECT * FROM partial_hits_1 AS p1 JOIN partial_hits_2 AS p2 ON p1.id = p2.id;";
+    println!("{}", query_4);
     match parser::parse_handler(query_4) {
         Ok((remaining, ast)) => {
             println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);

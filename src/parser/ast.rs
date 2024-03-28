@@ -8,7 +8,8 @@ pub enum Statement {
 #[derive(Debug, PartialEq)]
 pub struct SelectStatement {
     pub columns: Vec<Column>,
-    pub from: String,
+    pub from: FromClause,
+    pub join: Option<JoinClause>,
     pub where_clause: Option<WhereClause>,
     pub group_by: Option<Vec<Column>>,
     pub limit: Option<i32>,
@@ -17,15 +18,15 @@ pub struct SelectStatement {
 
 #[derive(Debug, PartialEq)]
 pub struct InsertStatement {
-    pub target_table: String,
+    pub target_table: Table,
     pub source: Box<Statement>, // Simplification, assuming INSERT FROM SELECT only
 }
 
 #[derive(Debug, PartialEq)]
 pub struct CreateTableStatement {
-    pub table_name: String,
+    pub table_name: Table,
     pub columns: Vec<ColumnDefinition>,
-    pub primary_key: Vec<String>, // Simplification, assuming single column PK for now
+    pub primary_key: String, // Simplification, assuming single column PK for now
 }
 
 #[derive(Debug, PartialEq)]
@@ -49,14 +50,31 @@ pub enum AggregateFunction {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct FromClause {
+   pub table: Table
+}
+
+#[derive(Debug, PartialEq)]
+pub struct JoinClause {
+    pub table: Table,
+    pub condition: Condition
+}
+
+#[derive(Debug, PartialEq)]
+pub struct Table {
+    pub name: String,
+    pub alias: Option<String>
+}
+
+#[derive(Debug, PartialEq)]
 pub struct WhereClause {
     pub condition: Condition,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Condition {
-    GreaterThan { column: Column, value: i32 }, // Simplification for the example
-    // Add other conditions as needed
+    GreaterThan { column: Column, value: i32 }, 
+    EqualTo {val1: Column, val2: Column}
 }
 
 #[derive(Debug, PartialEq)]
@@ -65,7 +83,7 @@ pub struct ColumnDefinition {
     pub data_type: DataType,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum DataType {
     Int,
     UInt64,
