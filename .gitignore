@@ -2,7 +2,7 @@
 /target/
 
 #sample substrait plans used for reference
-/sample_substrait_plans/
+/src/sample_substrait_plans/
 
 # Rustdoc output
 /doc/
