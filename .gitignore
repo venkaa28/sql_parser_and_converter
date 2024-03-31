@@ -1,6 +1,9 @@
 # Compiled files and directories
 /target/
 
+#sample substrait plans used for reference
+/sample_substrait_plans/
+
 # Rustdoc output
 /doc/
 
