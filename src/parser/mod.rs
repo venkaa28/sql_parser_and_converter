@@ -1,14 +1,14 @@
 use nom::{
     branch::alt,
-    character::complete::{alpha1, alphanumeric1, multispace0, multispace1, char, none_of, digit1},
-    combinator::{map, map_res, recognize, opt, value},
+    character::complete::{alpha1, alphanumeric1, multispace0, char, none_of, digit1},
+    combinator::{map, map_res, recognize, opt},
     sequence::{delimited, pair, preceded, tuple, terminated},
     IResult, 
     bytes::complete::{tag_no_case, tag, escaped_transform},
-    multi::{many0, separated_list0, separated_list1}
+    multi::{many0, separated_list0}
 };
 
-mod ast;
+pub mod ast;
 use ast::*;
 
 // Parses static SQL keywords with surrounding optional whitespaces.
