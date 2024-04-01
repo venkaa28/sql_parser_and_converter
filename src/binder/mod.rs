@@ -1,13 +1,12 @@
 use substrait::proto::{
-    self,
-    aggregate_rel::Grouping,
-    expression::{
-        self, field_reference::ReferenceType, reference_segment::StructField, FieldReference,
+    self, aggregate_rel::Grouping, expression::{
+        self, field_reference::{self, ReferenceType}, reference_segment::StructField, FieldReference,
         ReferenceSegment, RexType, ScalarFunction,
-    },
-    function_argument::ArgType,
-    plan_rel::RelType,
-    read_rel, Expression, FunctionArgument, Plan, PlanRel, Rel, RelRoot,
+    }, extensions::{
+        self,
+        simple_extension_declaration::{ExtensionFunction, MappingType},
+        SimpleExtensionDeclaration, SimpleExtensionUri,
+    }, function_argument::ArgType, plan_rel::RelType, read_rel, r#type::{self, Kind, Struct}, Expression, FunctionArgument, NamedStruct, Plan, PlanRel, Rel, RelRoot, Type
 };
 
 use crate::parser::ast::*;
@@ -22,6 +21,7 @@ fn select_statement_to_substrait(
                 names: vec![select.from.table.name.clone()],
                 advanced_extension: None,
             })),
+            base_schema: Some(get_hits_base_schema()),
             ..Default::default()
         }))),
         ..Default::default()
@@ -32,14 +32,20 @@ fn select_statement_to_substrait(
     //if the select statement has a where clause
     if let Some(where_clause) = &select.where_clause {
         if let Condition::GreaterThan {
-            column: _,
+            column,
             value: _,
         } = &where_clause.condition
         {
+            //putting column in a list of columns -> list of strings -> string -> field index of string in base schema
+            let column_slice = std::slice::from_ref(column);
+            let field_names = construct_column_names(column_slice);
+            let field_name = field_names.get(0).map(|name| name.as_str()).unwrap_or_default();
+            let field_index = get_field_index_in_schema(&get_hits_base_schema(), field_name)
+            .expect("Column name not found in schema"); // This should be handled more gracefully
+
             let condition_expr = Expression {
                     rex_type: Some(expression::RexType::ScalarFunction(ScalarFunction {
-                        function_reference: 1, //ref to greater than function
-                        //add expressions to expression and function ref and correct ref here
+                        function_reference: 3, //ref to greater than function
                         arguments: vec![
                             FunctionArgument {
                                 arg_type: Some(ArgType::Value(Expression {
@@ -49,7 +55,7 @@ fn select_statement_to_substrait(
                                                 ReferenceSegment {
                                                     reference_type: Some(expression::reference_segment::ReferenceType::StructField(
                                                         Box::new(StructField {
-                                                            field: 10,
+                                                            field: field_index as i32,
                                                             child: None,
                                                         })
                                                     )),
@@ -92,14 +98,16 @@ fn select_statement_to_substrait(
         let grouping_columns = construct_column_names(&group_by_columns);
         let groupings = grouping_columns
             .into_iter()
-            .map(|_name| {
+            .map(|name| {
+                let field_index = get_field_index_in_schema(&get_hits_base_schema(), &name)
+                .expect("Field name not found in schema");
                 Expression {
                     rex_type: Some(RexType::Selection(Box::new(FieldReference {
                         reference_type: Some(ReferenceType::DirectReference(ReferenceSegment {
                             reference_type: Some(
                                 expression::reference_segment::ReferenceType::StructField(
                                     Box::new(StructField {
-                                        field: 10, //todo map field name to index of base schema
+                                        field: field_index as i32,
                                         child: None,
                                     }),
                                 ),
@@ -154,7 +162,7 @@ fn select_statement_to_substrait(
 }
 
 //function to turn column names into a vector of strings for the root relations names field
-fn construct_column_names(columns: &[Column]) -> Vec<String> {
+fn construct_column_names(columns: &[Column]) -> Vec<std::string::String> {
     columns
         .iter()
         .map(|column| {
@@ -171,15 +179,109 @@ fn construct_column_names(columns: &[Column]) -> Vec<String> {
         .collect()
 }
 
+//function got get hits base schema
+fn get_hits_base_schema() -> NamedStruct {
+    NamedStruct {
+        names: vec![
+            "id".to_string(),
+            "timestamp".to_string(),
+            "user_id".to_string(),
+            "event_type".to_string(),
+            "url".to_string(),
+            "session_id".to_string(),
+            "user_agent".to_string(),
+            "country".to_string(),
+            "ip".to_string(),
+            "referrer".to_string(),
+            "clicks".to_string(),
+            "impressions".to_string(),
+            "revenue".to_string(),
+        ],
+        r#struct: Some(Struct {
+            types: vec![
+                Type { kind: Some(Kind::I64(r#type::I64 { nullability: 1, ..Default::default() })) }, // Assuming this represents an "id" field.
+                Type { kind: Some(Kind::Timestamp(r#type::Timestamp { nullability: 1, ..Default::default() })) }, // Assuming this represents a "timestamp" field.
+                Type { kind: Some(Kind::I64(r#type::I64 { nullability: 1, ..Default::default() })) }, // Assuming this represents a "user_id" field.
+                Type { kind: Some(Kind::String(r#type::String { nullability: 1, ..Default::default() })) }, // Assuming this represents an "event_type" field.
+                Type { kind: Some(Kind::String(r#type::String { nullability: 1, ..Default::default() })) }, // Assuming this represents a "url" field.
+                Type { kind: Some(Kind::String(r#type::String { nullability: 1, ..Default::default() })) }, // Assuming this represents a "session_id" field.
+                Type { kind: Some(Kind::String(r#type::String { nullability: 1, ..Default::default() })) }, // Assuming this represents a "user_agent" field.
+                Type { kind: Some(Kind::String(r#type::String { nullability: 1, ..Default::default() })) }, // Assuming this represents a "country" field.
+                Type { kind: Some(Kind::String(r#type::String { nullability: 1, ..Default::default() })) }, // Assuming this represents an "ip" field.
+                Type { kind: Some(Kind::String(r#type::String { nullability: 1, ..Default::default() })) }, // Assuming this represents a "referrer" field.
+                Type { kind: Some(Kind::I64(r#type::I64 { nullability: 1, ..Default::default() })) }, // Assuming this represents a "clicks" field.
+                Type { kind: Some(Kind::I64(r#type::I64 { nullability: 1, ..Default::default() })) }, // Assuming this represents an "impressions" field.
+                Type {
+                    kind: Some(Kind::Decimal(r#type::Decimal {
+                        precision: 10,
+                        scale: 2,
+                        nullability: 1,
+                        ..Default::default()
+                    })),
+                }, // Assuming this represents a "revenue" field.
+            ],
+            type_variation_reference: 0, // Default value for simplicity
+            nullability: 1, // Assuming the whole struct is required
+        }),
+    }
+}
+
+fn get_field_index_in_schema(schema: &NamedStruct, field_name: &str) -> Option<usize> {
+    schema.names.iter().position(|name| name == field_name)
+}
+
 //function to convert any statement into a substrait plan based on the type of Statement it is
 pub fn ast_to_substrait_plan(ast: &Statement) -> Result<Plan, Box<dyn std::error::Error>> {
+    let extension_uris:Vec<extensions::SimpleExtensionUri> = vec![
+        SimpleExtensionUri {
+            uri: "https://github.com/substrait-io/substrait/blob/main/extensions/functions_aggregate_generic.yaml".to_string(),
+            extension_uri_anchor: 1
+        },
+        SimpleExtensionUri {
+            uri: "https://github.com/substrait-io/substrait/blob/main/extensions/functions_comparison.yaml".to_string(),
+            extension_uri_anchor: 2
+        }
+    ];
+
+    let extensions: Vec<extensions::SimpleExtensionDeclaration> = vec![
+        SimpleExtensionDeclaration {
+            mapping_type: {
+                Some(MappingType::ExtensionFunction(ExtensionFunction {
+                    extension_uri_reference: 1,
+                    function_anchor: 1,
+                    name: "count".to_string(),
+                }))
+            },
+        },
+        SimpleExtensionDeclaration {
+            mapping_type: {
+                Some(MappingType::ExtensionFunction(ExtensionFunction {
+                    extension_uri_reference: 2,
+                    function_anchor: 2,
+                    name: "equal".to_string(),
+                }))
+            },
+        },
+        SimpleExtensionDeclaration {
+            mapping_type: {
+                Some(MappingType::ExtensionFunction(ExtensionFunction {
+                    extension_uri_reference: 2,
+                    function_anchor: 5,
+                    name: "gt".to_string(),
+                }))
+            },
+        }
+    ];
+
     match ast {
         Statement::Select(select_stmt) => {
             let plan_rel = select_statement_to_substrait(select_stmt)?;
-
+            
             // Construct the Plan with the RelRoot
             let plan = Plan {
                 relations: vec![plan_rel], // Add the RelRoot to the Plan
+                extension_uris: extension_uris,
+                extensions: extensions,
                 ..Default::default()
             };
             Ok(plan) // Return the constructed Plan
