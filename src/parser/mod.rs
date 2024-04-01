@@ -1,12 +1,12 @@
 use nom::{
     branch::alt,
-    character::complete::{alpha1, alphanumeric1, multispace0, multispace1, char, none_of, digit1},
-    combinator::{map, map_res, recognize, opt, value},
-    sequence::{delimited, pair, preceded, tuple, terminated},
-    IResult, 
-    bytes::complete::{tag_no_case, tag, escaped_transform},
+    bytes::complete::{escaped_transform, tag, tag_no_case},
+    character::complete::{alpha1, alphanumeric1, char, digit1, multispace0, multispace1, none_of},
+    combinator::{map, map_res, opt, recognize, value},
+    lib::std::string::ParseError,
     multi::{many0, separated_list0, separated_list1},
-    lib::std::string::ParseError
+    sequence::{delimited, pair, preceded, terminated, tuple},
+    IResult,
 };
 
 pub mod ast;
@@ -24,10 +24,7 @@ fn parse_star(input: &str) -> IResult<&str, Column> {
 
 /// Parses an integer number.
 fn parse_number(input: &str) -> IResult<&str, i32> {
-    map_res(
-        digit1,
-        |digit_str: &str| digit_str.parse::<i32>()
-    )(input)
+    map_res(digit1, |digit_str: &str| digit_str.parse::<i32>())(input)
 }
 
 /// Parses a column name, which can be a simple word enclosed in double quotes,
@@ -38,23 +35,14 @@ fn parse_column_name(input: &str) -> IResult<&str, Column> {
         map(
             delimited(
                 tag("\""),
-                escaped_transform(
-                    none_of("\\\""),
-                    '\\',
-                    map(tag("\""), |_| "\""),
-                ),
+                escaped_transform(none_of("\\\""), '\\', map(tag("\""), |_| "\"")),
                 tag("\""),
             ),
             |name: String| Column::Name(name),
         ),
         // If the first parser fails, try parsing a dot-separated identifier
         map(
-            recognize(
-                pair(
-                    alphanumeric1, 
-                    opt(pair(char('.'), alphanumeric1)),
-                )
-            ),
+            recognize(pair(alphanumeric1, opt(pair(char('.'), alphanumeric1)))),
             |name: &str| Column::Name(name.to_string()),
         ),
     ))(input)
@@ -70,10 +58,7 @@ fn parse_table_name(input: &str) -> IResult<&str, Table> {
                 many0(alt((alphanumeric1, map(char('_'), |_| "_")))),
             )),
             // Parse an optional alias
-            opt(preceded(
-                |input| parse_keyword(input, "AS"),
-                parse_alias
-            )),
+            opt(preceded(|input| parse_keyword(input, "AS"), parse_alias)),
         )),
         |(name, alias): (&str, Option<&str>)| Table {
             name: name.to_string(),
@@ -99,11 +84,11 @@ pub fn parse_count_function(input: &str) -> IResult<&str, Column> {
     let (input, val) = parse_count_contents(input)?;
     //creates a column object using the count function and the value of its aggregate expression
     Ok((
-        input, 
-        Column::Function(Function { 
-            func: AggregateFunction::Count, 
-            val 
-        })
+        input,
+        Column::Function(Function {
+            func: AggregateFunction::Count,
+            val,
+        }),
     ))
 }
 
@@ -119,7 +104,7 @@ fn parse_selections(input: &str) -> IResult<&str, Vec<Column>> {
             alt((
                 parse_count_function,
                 parse_column_name,
-                map(parse_number, Column::Number)
+                map(parse_number, Column::Number),
             )),
         ),
     ))(input)
@@ -136,7 +121,7 @@ fn parse_from_clause(input: &str) -> IResult<&str, FromClause> {
 // Parses an alias name
 fn parse_alias(input: &str) -> IResult<&str, &str> {
     recognize(pair(
-        alt((alpha1, map(char('_'), |_| "_"))), 
+        alt((alpha1, map(char('_'), |_| "_"))),
         many0(alt((alphanumeric1, map(char('_'), |_| "_")))),
     ))(input)
 }
@@ -171,10 +156,7 @@ fn parse_condition(input: &str) -> IResult<&str, Condition> {
 fn parse_where_clause(input: &str) -> IResult<&str, Option<WhereClause>> {
     opt(preceded(
         |input| parse_keyword(input, "WHERE"),
-        map(
-            parse_condition,
-            |condition| WhereClause { condition },
-        ),
+        map(parse_condition, |condition| WhereClause { condition }),
     ))(input)
 }
 
@@ -184,12 +166,8 @@ fn parse_join_clause(input: &str) -> IResult<&str, Option<JoinClause>> {
             preceded(|input| parse_keyword(input, "JOIN"), parse_table_name),
             preceded(|input| parse_keyword(input, "ON"), parse_condition),
         )),
-        |(table, condition)| JoinClause {
-            table,
-            condition,
-        }
+        |(table, condition)| JoinClause { table, condition },
     ))(input)
-
 }
 
 fn parse_group_by_clause(input: &str) -> IResult<&str, Option<Vec<Column>>> {
@@ -197,15 +175,15 @@ fn parse_group_by_clause(input: &str) -> IResult<&str, Option<Vec<Column>>> {
         |input| parse_keyword(input, "GROUP BY"),
         separated_list0(
             preceded(multispace0, terminated(char(','), multispace0)),
-            parse_column_name
-        )
+            parse_column_name,
+        ),
     ))(input)
 }
 
 fn parse_limit_clause(input: &str) -> IResult<&str, Option<i32>> {
     opt(preceded(
         |input| parse_keyword(input, "LIMIT"),
-        parse_number
+        parse_number,
     ))(input)
 }
 
@@ -217,19 +195,18 @@ fn parse_columns(input: &str) -> IResult<&str, Vec<ColumnDefinition>> {
             delimited(multispace0, char(','), multispace0), // Handle whitespace before ','
             parse_column_def, // Assuming this function is defined elsewhere
         ),
-        delimited(multispace0, char(')'), multispace0) // Also strip whitespace before closing ')'
+        delimited(multispace0, char(')'), multispace0), // Also strip whitespace before closing ')'
     )(input)
 }
 
 // Parser for a single column definition
 fn parse_column_def(input: &str) -> IResult<&str, ColumnDefinition> {
     map(
-        tuple((
-            parse_alias,
-            multispace1,
-            parse_data_type,
-        )),
-        |(name, _, data_type)| ColumnDefinition { name: name.to_string(), data_type }
+        tuple((parse_alias, multispace1, parse_data_type)),
+        |(name, _, data_type)| ColumnDefinition {
+            name: name.to_string(),
+            data_type,
+        },
     )(input)
 }
 
@@ -245,20 +222,20 @@ fn parse_data_type(input: &str) -> IResult<&str, DataType> {
                 tag("Decimal("),
                 terminated(
                     tuple((
-                        parse_number,              // Parse precision
-                        char(','),                  // Expect a comma separator
-                        multispace0,                
-                        parse_number,              // Parse scale
+                        parse_number, // Parse precision
+                        char(','),    // Expect a comma separator
+                        multispace0,
+                        parse_number, // Parse scale
                     )),
-                    char(')')                    // Expect closing parenthesis
-                )
+                    char(')'), // Expect closing parenthesis
+                ),
             ),
-            |(precision, _ , _, scale)| {
+            |(precision, _, _, scale)| {
                 match (precision.try_into(), scale.try_into()) {
                     (Ok(precision_u8), Ok(scale_u8)) => DataType::Decimal(precision_u8, scale_u8),
                     _ => panic!("Precision or scale value out of u8 range"), // Handle error appropriately
                 }
-            }
+            },
         ),
     ))(input)
 }
@@ -266,7 +243,7 @@ fn parse_data_type(input: &str) -> IResult<&str, DataType> {
 fn parse_primary_key(input: &str) -> IResult<&str, Option<&str>> {
     opt(preceded(
         |input| parse_keyword(input, "PRIMARY KEY"),
-        parse_alias
+        parse_alias,
     ))(input)
 }
 
@@ -288,13 +265,13 @@ fn parse_select_statement(input: &str) -> IResult<&str, Statement> {
         Statement::Select(SelectStatement {
             columns,
             from,
-            join, 
-            where_clause, 
-            group_by, 
+            join,
+            where_clause,
+            group_by,
             limit, // Placeholder: implement actual parsing
             end_of_statement,
-        },
-    )))
+        }),
+    ))
 }
 
 fn parse_insert_statement(input: &str) -> IResult<&str, Statement> {
@@ -305,9 +282,9 @@ fn parse_insert_statement(input: &str) -> IResult<&str, Statement> {
         input,
         Statement::Insert(InsertStatement {
             target_table,
-            source: Box::new(source)
-        },
-    )))
+            source: Box::new(source),
+        }),
+    ))
 }
 
 fn parse_create_table_statement(input: &str) -> IResult<&str, Statement> {
@@ -321,9 +298,9 @@ fn parse_create_table_statement(input: &str) -> IResult<&str, Statement> {
             table_name,
             columns,
             primary_key: primary_key.unwrap_or_default().to_string(),
-            end_of_statement
-        },
-    )))
+            end_of_statement,
+        }),
+    ))
 }
 
 // Revised parse_handler function
@@ -331,6 +308,9 @@ pub fn parse_handler(input: &str) -> IResult<&str, Statement> {
     alt((
         preceded(|i| parse_keyword(i, "SELECT"), parse_select_statement),
         preceded(|i| parse_keyword(i, "INSERT INTO"), parse_insert_statement),
-        preceded(|i| parse_keyword(i, "CREATE TABLE"), parse_create_table_statement),
+        preceded(
+            |i| parse_keyword(i, "CREATE TABLE"),
+            parse_create_table_statement,
+        ),
     ))(input)
 }

@@ -35,13 +35,13 @@ pub enum Column {
     Star,
     Name(String),
     Function(Function),
-    Number(i32)
+    Number(i32),
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Function {
     pub func: AggregateFunction,
-    pub val: String
+    pub val: String,
 }
 
 #[derive(Debug, PartialEq)]
@@ -52,19 +52,19 @@ pub enum AggregateFunction {
 
 #[derive(Debug, PartialEq)]
 pub struct FromClause {
-   pub table: Table
+    pub table: Table,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct JoinClause {
     pub table: Table,
-    pub condition: Condition
+    pub condition: Condition,
 }
 
 #[derive(Debug, PartialEq)]
 pub struct Table {
     pub name: String,
-    pub alias: Option<String>
+    pub alias: Option<String>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -74,8 +74,8 @@ pub struct WhereClause {
 
 #[derive(Debug, PartialEq)]
 pub enum Condition {
-    GreaterThan { column: Column, value: i32 }, 
-    EqualTo {val1: Column, val2: Column}
+    GreaterThan { column: Column, value: i32 },
+    EqualTo { val1: Column, val2: Column },
 }
 
 #[derive(Debug, PartialEq)]
@@ -91,5 +91,4 @@ pub enum DataType {
     String,
     DateTime,
     Decimal(u8, u8), // Precision, Scale
-    // Extend with other data types as needed
 }

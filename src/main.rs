@@ -1,7 +1,7 @@
 use serde_json::json;
 
-mod parser;
 mod binder;
+mod parser;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let query_1 = "SELECT COUNT(*) FROM hits;";
@@ -11,18 +11,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok((remaining, ast)) => {
             println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
             //ast_q1 = Some(ast);
-        },
+        }
         Err(e) => println!("No valid SQL query found\n  {:?}", e),
     }
     println!("");
 
-    let query_2 = "SELECT \"user_id\", COUNT(*) FROM hits WHERE \"clicks\" > 0 GROUP BY \"user_id\";";
+    let query_2 =
+        "SELECT \"user_id\", COUNT(*) FROM hits WHERE \"clicks\" > 0 GROUP BY \"user_id\";";
     println!("{}", query_2);
     println!("");
     match parser::parse_handler(query_2) {
         Ok((remaining, ast)) => {
             println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
-        },
+        }
         Err(e) => println!("No valid SQL query found\n  {:?}", e),
     }
     println!("");
@@ -33,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match parser::parse_handler(query_3) {
         Ok((remaining, ast)) => {
             println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
-        },
+        }
         Err(e) => println!("No valid SQL query found\n  {:?}", e),
     }
     println!("");
@@ -44,7 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match parser::parse_handler(query_4) {
         Ok((remaining, ast)) => {
             println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
-        },
+        }
         Err(e) => println!("No valid SQL query found\n  {:?}", e),
     }
     println!("");
@@ -55,7 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match parser::parse_handler(query_5) {
         Ok((remaining, ast)) => {
             println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
-        },
+        }
         Err(e) => println!("No valid SQL query found\n  {:?}", e),
     }
     println!("");
@@ -65,12 +66,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             match binder::ast_to_substrait_plan(&ast) {
                 Ok(plan) => {
                     // Now `plan` is unwrapped and can be used directly
-                    println!("Substrait JSON Plan: {:?}", serde_json::to_string_pretty(&plan).unwrap());
+                    println!(
+                        "Substrait JSON Plan: {:?}",
+                        serde_json::to_string_pretty(&plan).unwrap()
+                    );
                     // If you want to serialize `plan` to JSON, you can do it here directly
-                },
+                }
                 Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
             }
-        },
+        }
         Err(e) => println!("Failed to parse query: {:?}", e),
     }
 
@@ -81,12 +85,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             match binder::ast_to_substrait_plan(&ast) {
                 Ok(plan) => {
                     // Now `plan` is unwrapped and can be used directly
-                    println!("Substrait JSON Plan: {:?}", serde_json::to_string_pretty(&plan).unwrap());
+                    println!(
+                        "Substrait JSON Plan: {:?}",
+                        serde_json::to_string_pretty(&plan).unwrap()
+                    );
                     // If you want to serialize `plan` to JSON, you can do it here directly
-                },
+                }
                 Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
             }
-        },
+        }
         Err(e) => println!("Failed to parse query: {:?}", e),
     }
 
@@ -97,12 +104,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             match binder::ast_to_substrait_plan(&ast) {
                 Ok(plan) => {
                     // Now `plan` is unwrapped and can be used directly
-                    println!("Substrait JSON Plan: {:?}", serde_json::to_string_pretty(&plan).unwrap());
+                    println!(
+                        "Substrait JSON Plan: {:?}",
+                        serde_json::to_string_pretty(&plan).unwrap()
+                    );
                     // If you want to serialize `plan` to JSON, you can do it here directly
-                },
+                }
                 Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
             }
-        },
+        }
         Err(e) => println!("Failed to parse query: {:?}", e),
     }
 
