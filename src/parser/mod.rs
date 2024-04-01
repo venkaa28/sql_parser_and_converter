@@ -103,8 +103,8 @@ fn parse_selections(input: &str) -> IResult<&str, Vec<Column>> {
             delimited(multispace0, char(','), multispace0),
             alt((
                 parse_count_function,
-                parse_column_name,
                 map(parse_number, Column::Number),
+                parse_column_name,
             )),
         ),
     ))(input)
