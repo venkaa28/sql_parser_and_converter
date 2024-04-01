@@ -115,10 +115,10 @@ fn parse_selections(input: &str) -> IResult<&str, Vec<Column>> {
         map(parse_star, |star| vec![star]),
         // Branch to parse a list of comma-separated columns and COUNT functions.
         separated_list0(
-            preceded(multispace0, terminated(char(','), multispace0)),
+            delimited(multispace0, char(','), multispace0),
             alt((
-                parse_column_name,
                 parse_count_function,
+                parse_column_name,
                 map(parse_number, Column::Number)
             )),
         ),
