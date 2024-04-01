@@ -61,5 +61,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => println!("Failed to parse query: {:?}", e),
     }
 
+    println!("");
+
+    match parser::parse_handler(query_2) {
+        Ok((remaining, ast)) => {
+            match binder::ast_to_substrait_plan(&ast) {
+                Ok(plan) => {
+                    // Now `plan` is unwrapped and can be used directly
+                    println!("Substrait JSON Plan: {:?}", serde_json::to_string_pretty(&plan).unwrap());
+                    // If you want to serialize `plan` to JSON, you can do it here directly
+                },
+                Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
+            }
+        },
+        Err(e) => println!("Failed to parse query: {:?}", e),
+    }
+
+    println!("");
+
+    match parser::parse_handler(query_3) {
+        Ok((remaining, ast)) => {
+            match binder::ast_to_substrait_plan(&ast) {
+                Ok(plan) => {
+                    // Now `plan` is unwrapped and can be used directly
+                    println!("Substrait JSON Plan: {:?}", serde_json::to_string_pretty(&plan).unwrap());
+                    // If you want to serialize `plan` to JSON, you can do it here directly
+                },
+                Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
+            }
+        },
+        Err(e) => println!("Failed to parse query: {:?}", e),
+    }
+
     Ok(())
 }
