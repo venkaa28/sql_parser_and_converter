@@ -1,27 +1,217 @@
 [
     {
         "query": "SELECT COUNT(*) FROM hits;",
-        "expected_ast": "Select(SelectStatement { columns: [Function(Function { func: Count, val: \"*\" })], from: FromClause { table: Table { name: \"hits\", alias: None } }, join: None, where_clause: None, group_by: None, limit: None, end_of_statement: Some(';') })",
+        "expected_ast": {
+            "Select": {
+              "columns": [
+                {
+                  "Function": {
+                    "func": "Count",
+                    "val": "*"
+                  }
+                }
+              ],
+              "from": {
+                "table": {
+                  "name": "hits",
+                  "alias": null
+                }
+              },
+              "join": null,
+              "where_clause": null,
+              "group_by": null,
+              "limit": null,
+              "end_of_statement": ";"
+            }
+          },
         "expected_substrait": ""
     },
     {
         "query": "SELECT \"user_id\", COUNT(*) FROM hits WHERE \"clicks\" > 0 GROUP BY \"user_id\";",
-        "expected_ast": "Select(SelectStatement { columns: [Name(\"user_id\"), Function(Function { func: Count, val: \"*\" })], from: FromClause { table: Table { name: \"hits\", alias: None } }, join: None, where_clause: Some(WhereClause { condition: GreaterThan { column: Name(\"clicks\"), value: 0 } }), group_by: Some([Name(\"user_id\")]), limit: None, end_of_statement: Some(';') })",
+        "expected_ast": {
+            "Select": {
+              "columns": [
+                {
+                  "Name": "user_id"
+                },
+                {
+                  "Function": {
+                    "func": "Count",
+                    "val": "*"
+                  }
+                }
+              ],
+              "from": {
+                "table": {
+                  "name": "hits",
+                  "alias": null
+                }
+              },
+              "join": null,
+              "where_clause": {
+                "condition": {
+                  "GreaterThan": {
+                    "column": {
+                      "Name": "clicks"
+                    },
+                    "value": 0
+                  }
+                }
+              },
+              "group_by": [
+                {
+                  "Name": "user_id"
+                }
+              ],
+              "limit": null,
+              "end_of_statement": ";"
+            }
+          },
         "expected_substrait": ""
     },
     {
         "query": "SELECT 1, \"URL\" FROM hits LIMIT 10;",
-        "expected_ast": "Select(SelectStatement { columns: [Number(1), Name(\"URL\")], from: FromClause { table: Table { name: \"hits\", alias: None } }, join: None, where_clause: None, group_by: None, limit: Some(10), end_of_statement: Some(';') })",
+        "expected_ast": {
+            "Select": {
+              "columns": [
+                {
+                  "Number": 1
+                },
+                {
+                  "Name": "URL"
+                }
+              ],
+              "from": {
+                "table": {
+                  "name": "hits",
+                  "alias": null
+                }
+              },
+              "join": null,
+              "where_clause": null,
+              "group_by": null,
+              "limit": 10,
+              "end_of_statement": ";"
+            }
+          },
         "expected_substrait": ""
     },
     {
         "query": "INSERT INTO hits SELECT * FROM partial_hits_1 AS p1 JOIN partial_hits_2 AS p2 ON p1.id = p2.id;",
-        "expected_ast": "Insert(InsertStatement { target_table: Table { name: \"hits\", alias: None }, source: Select(SelectStatement { columns: [Star], from: FromClause { table: Table { name: \"partial_hits_1\", alias: Some(\"p1\") } }, join: Some(JoinClause { table: Table { name: \"partial_hits_2\", alias: Some(\"p2\") }, condition: EqualTo { val1: Name(\"p1.id\"), val2: Name(\"p2.id\") } }), where_clause: None, group_by: None, limit: None, end_of_statement: Some(';') }) })",
+        "expected_ast": {
+            "Insert": {
+              "target_table": {
+                "name": "hits",
+                "alias": null
+              },
+              "source": {
+                "Select": {
+                  "columns": [
+                    "Star"
+                  ],
+                  "from": {
+                    "table": {
+                      "name": "partial_hits_1",
+                      "alias": "p1"
+                    }
+                  },
+                  "join": {
+                    "table": {
+                      "name": "partial_hits_2",
+                      "alias": "p2"
+                    },
+                    "condition": {
+                      "EqualTo": {
+                        "val1": {
+                          "Name": "p1.id"
+                        },
+                        "val2": {
+                          "Name": "p2.id"
+                        }
+                      }
+                    }
+                  },
+                  "where_clause": null,
+                  "group_by": null,
+                  "limit": null,
+                  "end_of_statement": ";"
+                }
+              }
+            }
+          },
         "expected_substrait": ""
     },
     {
         "query": "CREATE TABLE hits (id UInt64, timestamp DateTime, user_id UInt64, event_type String, url String, session_id String, user_agent String, country String, ip String, referrer String, clicks UInt64, impressions UInt64, revenue Decimal(10, 2)) PRIMARY KEY id;",
-        "expected_ast": "CreateTable(CreateTableStatement { table_name: Table { name: \"hits\", alias: None }, columns: [ColumnDefinition { name: \"id\", data_type: UInt64 }, ColumnDefinition { name: \"timestamp\", data_type: DateTime }, ColumnDefinition { name: \"user_id\", data_type: UInt64 }, ColumnDefinition { name: \"event_type\", data_type: String }, ColumnDefinition { name: \"url\", data_type: String }, ColumnDefinition { name: \"session_id\", data_type: String }, ColumnDefinition { name: \"user_agent\", data_type: String }, ColumnDefinition { name: \"country\", data_type: String }, ColumnDefinition { name: \"ip\", data_type: String }, ColumnDefinition { name: \"referrer\", data_type: String }, ColumnDefinition { name: \"clicks\", data_type: UInt64 }, ColumnDefinition { name: \"impressions\", data_type: UInt64 }, ColumnDefinition { name: \"revenue\", data_type: Decimal(10, 2) }], primary_key: \"id\", end_of_statement: Some(';') })",
+        "expected_ast": {
+            "CreateTable": {
+              "table_name": {
+                "name": "hits",
+                "alias": null
+              },
+              "columns": [
+                {
+                  "name": "id",
+                  "data_type": "UInt64"
+                },
+                {
+                  "name": "timestamp",
+                  "data_type": "DateTime"
+                },
+                {
+                  "name": "user_id",
+                  "data_type": "UInt64"
+                },
+                {
+                  "name": "event_type",
+                  "data_type": "String"
+                },
+                {
+                  "name": "url",
+                  "data_type": "String"
+                },
+                {
+                  "name": "session_id",
+                  "data_type": "String"
+                },
+                {
+                  "name": "user_agent",
+                  "data_type": "String"
+                },
+                {
+                  "name": "country",
+                  "data_type": "String"
+                },
+                {
+                  "name": "ip",
+                  "data_type": "String"
+                },
+                {
+                  "name": "referrer",
+                  "data_type": "String"
+                },
+                {
+                  "name": "clicks",
+                  "data_type": "UInt64"
+                },
+                {
+                  "name": "impressions",
+                  "data_type": "UInt64"
+                },
+                {
+                  "name": "revenue",
+                  "data_type": {
+                    "Decimal": [
+                      10,
+                      2
+                    ]
+                  }
+                }
+              ],
+              "primary_key": "id",
+              "end_of_statement": ";"
+            }
+          },
         "expected_substrait": ""
     }
 ]

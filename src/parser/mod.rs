@@ -3,7 +3,6 @@ use nom::{
     bytes::complete::{escaped_transform, tag, tag_no_case},
     character::complete::{alpha1, alphanumeric1, char, digit1, multispace0, multispace1, none_of},
     combinator::{map, map_res, opt, recognize, value},
-    lib::std::string::ParseError,
     multi::{many0, separated_list0, separated_list1},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
@@ -12,7 +11,7 @@ use nom::{
 pub mod ast;
 use ast::*;
 
-// Parses static SQL keywords with surrounding optional whitespaces.
+// Parses static keywords with surrounding optional whitespaces.
 fn parse_keyword<'a>(input: &'a str, keyword: &'static str) -> IResult<&'a str, &'a str> {
     delimited(multispace0, tag_no_case(keyword), multispace0)(input)
 }
@@ -78,7 +77,7 @@ fn parse_aggregate_expression(input: &str) -> IResult<&str, String> {
 pub fn parse_count_function(input: &str) -> IResult<&str, Column> {
     //inline function discards first and third objects. calls parse_aggregate_expression function to grab the value within the parenthesis
     let mut parse_count_contents = delimited(char('('), parse_aggregate_expression, char(')'));
-    // looks for the word count, the calls the function described above
+    // looks for the word count, then calls the function described above
     let (input, _) = tag_no_case("COUNT")(input)?;
     // let (input, _) = multispace0(input)?;
     let (input, val) = parse_count_contents(input)?;
@@ -146,13 +145,14 @@ fn parse_condition(input: &str) -> IResult<&str, Condition> {
                 multispace0,
                 char('='),
                 multispace0,
-                parse_column_name, // Assuming you want to compare two column names for equality
+                parse_column_name,
             )),
             |(val1, _, _, _, val2)| Condition::EqualTo { val1, val2 },
         ),
     ))(input)
 }
 
+//Parses the where clause
 fn parse_where_clause(input: &str) -> IResult<&str, Option<WhereClause>> {
     opt(preceded(
         |input| parse_keyword(input, "WHERE"),
@@ -160,6 +160,7 @@ fn parse_where_clause(input: &str) -> IResult<&str, Option<WhereClause>> {
     ))(input)
 }
 
+//Parses the join clause
 fn parse_join_clause(input: &str) -> IResult<&str, Option<JoinClause>> {
     opt(map(
         tuple((
@@ -170,6 +171,7 @@ fn parse_join_clause(input: &str) -> IResult<&str, Option<JoinClause>> {
     ))(input)
 }
 
+//Parses the group by clause
 fn parse_group_by_clause(input: &str) -> IResult<&str, Option<Vec<Column>>> {
     opt(preceded(
         |input| parse_keyword(input, "GROUP BY"),
@@ -180,6 +182,7 @@ fn parse_group_by_clause(input: &str) -> IResult<&str, Option<Vec<Column>>> {
     ))(input)
 }
 
+//Parses teh limit clause
 fn parse_limit_clause(input: &str) -> IResult<&str, Option<i32>> {
     opt(preceded(
         |input| parse_keyword(input, "LIMIT"),
@@ -187,7 +190,7 @@ fn parse_limit_clause(input: &str) -> IResult<&str, Option<i32>> {
     ))(input)
 }
 
-// Parser for the entire columns section
+// Parser for the entire columns section for the insert statement
 fn parse_columns(input: &str) -> IResult<&str, Vec<ColumnDefinition>> {
     delimited(
         preceded(multispace0, char('(')), // Stripping whitespace before '('
@@ -230,16 +233,15 @@ fn parse_data_type(input: &str) -> IResult<&str, DataType> {
                     char(')'), // Expect closing parenthesis
                 ),
             ),
-            |(precision, _, _, scale)| {
-                match (precision.try_into(), scale.try_into()) {
-                    (Ok(precision_u8), Ok(scale_u8)) => DataType::Decimal(precision_u8, scale_u8),
-                    _ => panic!("Precision or scale value out of u8 range"), // Handle error appropriately
-                }
+            |(precision, _, _, scale)| match (precision.try_into(), scale.try_into()) {
+                (Ok(precision_u8), Ok(scale_u8)) => DataType::Decimal(precision_u8, scale_u8),
+                _ => panic!("Precision or scale value out of u8 range"),
             },
         ),
     ))(input)
 }
 
+//Parses a primary key for the insert statement
 fn parse_primary_key(input: &str) -> IResult<&str, Option<&str>> {
     opt(preceded(
         |input| parse_keyword(input, "PRIMARY KEY"),
@@ -252,6 +254,7 @@ fn parse_end_of_statement(input: &str) -> IResult<&str, Option<char>> {
     opt(preceded(multispace0, char(';')))(input)
 }
 
+//combines a series of the parse functions above to parse a valid select statement
 fn parse_select_statement(input: &str) -> IResult<&str, Statement> {
     let (input, columns) = parse_selections(input)?;
     let (input, from) = parse_from_clause(input)?;
@@ -273,7 +276,7 @@ fn parse_select_statement(input: &str) -> IResult<&str, Statement> {
         }),
     ))
 }
-
+//combines a series of the parse functions above to parse a valid insert statement
 fn parse_insert_statement(input: &str) -> IResult<&str, Statement> {
     let (input, target_table) = parse_table_name(input)?;
     // known bug this will succeed if the nested query is another INSERT INTO or CREATE TABLE
@@ -287,6 +290,7 @@ fn parse_insert_statement(input: &str) -> IResult<&str, Statement> {
     ))
 }
 
+//combines a series of the parse functions above to parse a valid create table statement
 fn parse_create_table_statement(input: &str) -> IResult<&str, Statement> {
     let (input, table_name) = parse_table_name(input)?;
     let (input, columns) = parse_columns(input)?;
@@ -303,7 +307,7 @@ fn parse_create_table_statement(input: &str) -> IResult<&str, Statement> {
     ))
 }
 
-// Revised parse_handler function
+// Matches the type of statement and calls the appropriate parse function
 pub fn parse_handler(input: &str) -> IResult<&str, Statement> {
     alt((
         preceded(|i| parse_keyword(i, "SELECT"), parse_select_statement),

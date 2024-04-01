@@ -1,5 +1,3 @@
-use std::fs::read;
-
 use substrait::proto::{
     self,
     aggregate_rel::Grouping,
@@ -7,9 +5,9 @@ use substrait::proto::{
         self, field_reference::ReferenceType, reference_segment::StructField, FieldReference,
         ReferenceSegment, RexType, ScalarFunction,
     },
-    function_argument::{self, ArgType},
+    function_argument::ArgType,
     plan_rel::RelType,
-    read_rel, Expression, ExpressionReference, FunctionArgument, Plan, PlanRel, Rel, RelRoot,
+    read_rel, Expression, FunctionArgument, Plan, PlanRel, Rel, RelRoot,
 };
 
 use crate::parser::ast::*;
@@ -31,8 +29,13 @@ fn select_statement_to_substrait(
 
     let mut input_rel = read_rel;
 
+    //if the select statement has a where clause
     if let Some(where_clause) = &select.where_clause {
-        if let Condition::GreaterThan { column, value } = &where_clause.condition {
+        if let Condition::GreaterThan {
+            column: _,
+            value: _,
+        } = &where_clause.condition
+        {
             let condition_expr = Expression {
                     rex_type: Some(expression::RexType::ScalarFunction(ScalarFunction {
                         function_reference: 1, //ref to greater than function
@@ -60,8 +63,8 @@ fn select_statement_to_substrait(
                             FunctionArgument {
                                 arg_type: Some(ArgType::Value(Expression {
                                     rex_type: Some(RexType::Literal(expression::Literal {
-                                        nullable: false, // Assuming the literal is not nullable
-                                        type_variation_reference: 0, // Assuming default type variation
+                                        nullable: false,
+                                        type_variation_reference: 0,
                                         literal_type: Some(expression::literal::LiteralType::I32(0)), // Literal value of 0
                                 })),
                                 })),
@@ -72,11 +75,10 @@ fn select_statement_to_substrait(
                     ..Default::default()
             };
 
-            // Wrap the condition in a Filter operation
-
+            // Wrap the in in a Filter relation
             input_rel = Rel {
                 rel_type: Some(proto::rel::RelType::Filter(Box::new(proto::FilterRel {
-                    input: Some(Box::new(input_rel)), // Use the read relation as input
+                    input: Some(Box::new(input_rel)),
                     condition: Some(Box::new(condition_expr)),
                     ..Default::default()
                 }))),
@@ -85,11 +87,12 @@ fn select_statement_to_substrait(
         }
     }
 
+    //if the select statement has a group by clause
     if let Some(group_by_columns) = &select.group_by {
         let grouping_columns = construct_column_names(&group_by_columns);
         let groupings = grouping_columns
             .into_iter()
-            .map(|name| {
+            .map(|_name| {
                 Expression {
                     rex_type: Some(RexType::Selection(Box::new(FieldReference {
                         reference_type: Some(ReferenceType::DirectReference(ReferenceSegment {
@@ -108,6 +111,7 @@ fn select_statement_to_substrait(
             })
             .collect::<Vec<_>>();
 
+        //wrap the input in an aggregate rel
         input_rel = Rel {
             rel_type: Some(proto::rel::RelType::Aggregate(Box::new(
                 proto::AggregateRel {
@@ -121,6 +125,7 @@ fn select_statement_to_substrait(
         };
     }
 
+    //if the select statement has a limit clause, wrap the input in a Fetch Relation
     if let Some(limit_clause) = &select.limit {
         input_rel = Rel {
             rel_type: Some(proto::rel::RelType::Fetch(Box::new(proto::FetchRel {
@@ -148,6 +153,7 @@ fn select_statement_to_substrait(
     Ok(plan_rel)
 }
 
+//function to turn column names into a vector of strings for the root relations names field
 fn construct_column_names(columns: &[Column]) -> Vec<String> {
     columns
         .iter()
@@ -165,6 +171,7 @@ fn construct_column_names(columns: &[Column]) -> Vec<String> {
         .collect()
 }
 
+//function to convert any statement into a substrait plan based on the type of Statement it is
 pub fn ast_to_substrait_plan(ast: &Statement) -> Result<Plan, Box<dyn std::error::Error>> {
     match ast {
         Statement::Select(select_stmt) => {

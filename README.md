@@ -21,4 +21,5 @@ cargo run
 ```
 Run the tests:
 ```console
+cargo test
 ```
