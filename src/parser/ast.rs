@@ -27,6 +27,7 @@ pub struct CreateTableStatement {
     pub table_name: Table,
     pub columns: Vec<ColumnDefinition>,
     pub primary_key: String, // Simplification, assuming single column PK for now
+    pub end_of_statement: Option<char>,
 }
 
 #[derive(Debug, PartialEq)]

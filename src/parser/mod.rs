@@ -1,11 +1,12 @@
 use nom::{
     branch::alt,
-    character::complete::{alpha1, alphanumeric1, multispace0, char, none_of, digit1},
-    combinator::{map, map_res, recognize, opt},
+    character::complete::{alpha1, alphanumeric1, multispace0, multispace1, char, none_of, digit1},
+    combinator::{map, map_res, recognize, opt, value},
     sequence::{delimited, pair, preceded, tuple, terminated},
     IResult, 
     bytes::complete::{tag_no_case, tag, escaped_transform},
-    multi::{many0, separated_list0}
+    multi::{many0, separated_list0, separated_list1},
+    lib::std::string::ParseError
 };
 
 pub mod ast;
@@ -29,26 +30,34 @@ fn parse_number(input: &str) -> IResult<&str, i32> {
     )(input)
 }
 
-/// Parses a string literal that is specifically a "word" enclosed in double quotes,
-/// correctly handling escaped double quotes within.
+/// Parses a column name, which can be a simple word enclosed in double quotes,
+/// or an identifier that might include a dot, like `p1.id`.
 fn parse_column_name(input: &str) -> IResult<&str, Column> {
-    map(
-        delimited(
-        tag("\""),
-        // Process the content between the double quotes.
-        // Here, we only consider the escaped double quote sequence.
-        escaped_transform(
-            // Take characters that are not a backslash or double quote.
-            // This effectively allows any character except for control sequences.
-            none_of("\\\""),
-            '\\',
-            // Define handling of the escaped double quote.
-            map(tag("\""), |_| "\""),
+    alt((
+        // Attempt to parse a quoted string literal first
+        map(
+            delimited(
+                tag("\""),
+                escaped_transform(
+                    none_of("\\\""),
+                    '\\',
+                    map(tag("\""), |_| "\""),
+                ),
+                tag("\""),
+            ),
+            |name: String| Column::Name(name),
         ),
-        tag("\"")
-    ),
-    |name: String| Column::Name(name)
-    )(input)
+        // If the first parser fails, try parsing a dot-separated identifier
+        map(
+            recognize(
+                pair(
+                    alphanumeric1, 
+                    opt(pair(char('.'), alphanumeric1)),
+                )
+            ),
+            |name: &str| Column::Name(name.to_string()),
+        ),
+    ))(input)
 }
 
 /// Parses a table name.
@@ -200,6 +209,67 @@ fn parse_limit_clause(input: &str) -> IResult<&str, Option<i32>> {
     ))(input)
 }
 
+// Parser for the entire columns section
+fn parse_columns(input: &str) -> IResult<&str, Vec<ColumnDefinition>> {
+    delimited(
+        preceded(multispace0, char('(')), // Stripping whitespace before '('
+        separated_list1(
+            delimited(multispace0, char(','), multispace0), // Handle whitespace before ','
+            parse_column_def, // Assuming this function is defined elsewhere
+        ),
+        delimited(multispace0, char(')'), multispace0) // Also strip whitespace before closing ')'
+    )(input)
+}
+
+// Parser for a single column definition
+fn parse_column_def(input: &str) -> IResult<&str, ColumnDefinition> {
+    map(
+        tuple((
+            parse_alias,
+            multispace1,
+            parse_data_type,
+        )),
+        |(name, _, data_type)| ColumnDefinition { name: name.to_string(), data_type }
+    )(input)
+}
+
+// Parser for the DataType enum
+fn parse_data_type(input: &str) -> IResult<&str, DataType> {
+    alt((
+        value(DataType::Int, tag("Int")),
+        value(DataType::UInt64, tag("UInt64")),
+        value(DataType::String, tag("String")),
+        value(DataType::DateTime, tag("DateTime")),
+        map(
+            preceded(
+                tag("Decimal("),
+                terminated(
+                    tuple((
+                        parse_number,              // Parse precision
+                        char(','),                  // Expect a comma separator
+                        multispace0,                
+                        parse_number,              // Parse scale
+                    )),
+                    char(')')                    // Expect closing parenthesis
+                )
+            ),
+            |(precision, _ , _, scale)| {
+                match (precision.try_into(), scale.try_into()) {
+                    (Ok(precision_u8), Ok(scale_u8)) => DataType::Decimal(precision_u8, scale_u8),
+                    _ => panic!("Precision or scale value out of u8 range"), // Handle error appropriately
+                }
+            }
+        ),
+    ))(input)
+}
+
+fn parse_primary_key(input: &str) -> IResult<&str, Option<&str>> {
+    opt(preceded(
+        |input| parse_keyword(input, "PRIMARY KEY"),
+        parse_alias
+    ))(input)
+}
+
 /// Parses an optional end of statement character (';'), preceded by zero or more whitespace characters.
 fn parse_end_of_statement(input: &str) -> IResult<&str, Option<char>> {
     opt(preceded(multispace0, char(';')))(input)
@@ -240,25 +310,27 @@ fn parse_insert_statement(input: &str) -> IResult<&str, Statement> {
     )))
 }
 
-// fn parse_create_table_statement(input: &str) -> IResult<&str, Statement> {
-//     let (input, table_name) = parse_table_name(input)?;
-//     let (input, columns) = parse_columns(input)?;
-//     let (input, primary_key) = parse_primary_key(input)?;
-//     Ok((
-//         input,
-//         Statement::CreateTable(CreateTableStatement {
-//             table_name,
-//             columns,
-//             primary_key: primary_key.unwrap().to_string()
-//         },
-//     )))
-// }
+fn parse_create_table_statement(input: &str) -> IResult<&str, Statement> {
+    let (input, table_name) = parse_table_name(input)?;
+    let (input, columns) = parse_columns(input)?;
+    let (input, primary_key) = parse_primary_key(input)?;
+    let (input, end_of_statement) = parse_end_of_statement(input)?;
+    Ok((
+        input,
+        Statement::CreateTable(CreateTableStatement {
+            table_name,
+            columns,
+            primary_key: primary_key.unwrap_or_default().to_string(),
+            end_of_statement
+        },
+    )))
+}
 
 // Revised parse_handler function
 pub fn parse_handler(input: &str) -> IResult<&str, Statement> {
     alt((
         preceded(|i| parse_keyword(i, "SELECT"), parse_select_statement),
         preceded(|i| parse_keyword(i, "INSERT INTO"), parse_insert_statement),
-        // preceded(|i| parse_keyword(i, "CREATE TABLE"), parse_create_table_statement),
+        preceded(|i| parse_keyword(i, "CREATE TABLE"), parse_create_table_statement),
     ))(input)
 }

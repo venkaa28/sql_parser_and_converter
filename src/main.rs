@@ -47,51 +47,61 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     println!("");
 
-    match parser::parse_handler(query_1) {
+    let query_5 = "CREATE TABLE hits (id UInt64, timestamp DateTime, user_id UInt64, event_type String, url String, session_id String, user_agent String, country String, ip String, referrer String, clicks UInt64, impressions UInt64, revenue Decimal(10, 2)) PRIMARY KEY id;";
+    println!("{}", query_5);
+    match parser::parse_handler(query_5) {
         Ok((remaining, ast)) => {
-            match binder::ast_to_substrait_plan(&ast) {
-                Ok(plan) => {
-                    // Now `plan` is unwrapped and can be used directly
-                    println!("Substrait JSON Plan: {:?}", serde_json::to_string_pretty(&plan).unwrap());
-                    // If you want to serialize `plan` to JSON, you can do it here directly
-                },
-                Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
-            }
+            println!("Parsed AST: {:?}, Remaining: '{}'", ast, remaining);
         },
-        Err(e) => println!("Failed to parse query: {:?}", e),
+        Err(e) => println!("No valid SQL query found\n  {:?}", e),
     }
-
     println!("");
 
-    match parser::parse_handler(query_2) {
-        Ok((remaining, ast)) => {
-            match binder::ast_to_substrait_plan(&ast) {
-                Ok(plan) => {
-                    // Now `plan` is unwrapped and can be used directly
-                    println!("Substrait JSON Plan: {:?}", serde_json::to_string_pretty(&plan).unwrap());
-                    // If you want to serialize `plan` to JSON, you can do it here directly
-                },
-                Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
-            }
-        },
-        Err(e) => println!("Failed to parse query: {:?}", e),
-    }
+    // match parser::parse_handler(query_1) {
+    //     Ok((remaining, ast)) => {
+    //         match binder::ast_to_substrait_plan(&ast) {
+    //             Ok(plan) => {
+    //                 // Now `plan` is unwrapped and can be used directly
+    //                 println!("Substrait JSON Plan: {:?}", serde_json::to_string_pretty(&plan).unwrap());
+    //                 // If you want to serialize `plan` to JSON, you can do it here directly
+    //             },
+    //             Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
+    //         }
+    //     },
+    //     Err(e) => println!("Failed to parse query: {:?}", e),
+    // }
 
-    println!("");
+    // println!("");
 
-    match parser::parse_handler(query_3) {
-        Ok((remaining, ast)) => {
-            match binder::ast_to_substrait_plan(&ast) {
-                Ok(plan) => {
-                    // Now `plan` is unwrapped and can be used directly
-                    println!("Substrait JSON Plan: {:?}", serde_json::to_string_pretty(&plan).unwrap());
-                    // If you want to serialize `plan` to JSON, you can do it here directly
-                },
-                Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
-            }
-        },
-        Err(e) => println!("Failed to parse query: {:?}", e),
-    }
+    // match parser::parse_handler(query_2) {
+    //     Ok((remaining, ast)) => {
+    //         match binder::ast_to_substrait_plan(&ast) {
+    //             Ok(plan) => {
+    //                 // Now `plan` is unwrapped and can be used directly
+    //                 println!("Substrait JSON Plan: {:?}", serde_json::to_string_pretty(&plan).unwrap());
+    //                 // If you want to serialize `plan` to JSON, you can do it here directly
+    //             },
+    //             Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
+    //         }
+    //     },
+    //     Err(e) => println!("Failed to parse query: {:?}", e),
+    // }
+
+    // println!("");
+
+    // match parser::parse_handler(query_3) {
+    //     Ok((remaining, ast)) => {
+    //         match binder::ast_to_substrait_plan(&ast) {
+    //             Ok(plan) => {
+    //                 // Now `plan` is unwrapped and can be used directly
+    //                 println!("Substrait JSON Plan: {:?}", serde_json::to_string_pretty(&plan).unwrap());
+    //                 // If you want to serialize `plan` to JSON, you can do it here directly
+    //             },
+    //             Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
+    //         }
+    //     },
+    //     Err(e) => println!("Failed to parse query: {:?}", e),
+    // }
 
     Ok(())
 }

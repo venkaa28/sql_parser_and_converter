@@ -31,19 +31,21 @@ fn parse_data_type(input: &str) -> IResult<&str, DataType> {
         value(DataType::DateTime, tag("DateTime")),
         preceded(
             tag("Decimal("),
-            map_res(
+            map(
                 tuple((
-                    digit1,
-                    char(','),
-                    digit1,
-                    char(')')
+                    parse_number,              // Parse precision as u8
+                    char(','),             // Expect a comma separator
+                    parse_number,              // Parse scale as u8
                 )),
-                |(precision_str, _, scale_str, _)| -> Result<DataType, nom::Err<(&str, nom::error::ErrorKind)>> {
-                    let precision = precision_str.parse::<u8>().map_err(|_| nom::Err::Error(ParseError::from_error_kind(input, nom::error::ErrorKind::Digit)))?;
-                    let scale = scale_str.parse::<u8>().map_err(|_| nom::Err::Error(ParseError::from_error_kind(input, nom::error::ErrorKind::Digit)))?;
-                    Ok(DataType::Decimal(precision, scale))
-                }
-            )
+                |(precision, _, scale)| {
+                    // Attempt to cast precision and scale to u8
+                    match (precision.try_into(), scale.try_into()) {
+                        (Ok(precision_u8), Ok(scale_u8)) => DataType::Decimal(precision_u8, scale_u8),
+                        _ => panic!("Precision or scale value out of u8 range"), // Handle error appropriately
+                    }
+                },
+            ),
+            char(')')
         ),
     ))(input)
 }
