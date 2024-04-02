@@ -1,11 +1,8 @@
-
-
 mod binder;
 mod parser;
 mod tests;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     let query_1 = "SELECT COUNT(*) FROM hits;";
     println!("Query 1: {}", query_1);
     println!("");
@@ -29,7 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("");
 
     let query_2 =
-    "SELECT \"user_id\", COUNT(*) FROM hits WHERE \"clicks\" > 0 GROUP BY \"user_id\";";
+        "SELECT \"user_id\", COUNT(*) FROM hits WHERE \"clicks\" > 0 GROUP BY \"user_id\";";
     println!("Query 2: {}", query_2);
     println!("");
     match parser::parse_handler(query_2) {
@@ -116,7 +113,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(e) => println!("Failed to parse query: {:?}", e),
     }
     println!("");
-
 
     let fail_query = "SELECT SELECT COUNT(*) FROM hits;";
     println!("Fail Query: {}", fail_query);

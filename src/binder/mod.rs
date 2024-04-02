@@ -1,17 +1,23 @@
 use std::vec;
 
 use substrait::proto::{
-    self, aggregate_rel::Grouping, expression::{
-        self,
-        field_reference::ReferenceType,
-        reference_segment::StructField,
-        FieldReference, ReferenceSegment, RexType, ScalarFunction,
-    }, extensions::{
+    self,
+    aggregate_rel::Grouping,
+    ddl_rel,
+    expression::{
+        self, field_reference::ReferenceType, reference_segment::StructField, FieldReference,
+        ReferenceSegment, RexType, ScalarFunction,
+    },
+    extensions::{
         self,
         simple_extension_declaration::{ExtensionFunction, MappingType},
         SimpleExtensionDeclaration, SimpleExtensionUri,
-    }, function_argument::ArgType, plan_rel::RelType, read_rel, r#type::{self, Kind, Struct}, Expression, FunctionArgument, NamedObjectWrite, NamedStruct, Plan, PlanRel, Rel, RelRoot, Type,
-    ddl_rel
+    },
+    function_argument::ArgType,
+    plan_rel::RelType,
+    r#type::{self, Kind, Struct},
+    read_rel, Expression, FunctionArgument, NamedObjectWrite, NamedStruct, Plan, PlanRel, Rel,
+    RelRoot, Type,
 };
 
 use crate::parser::ast::*;
@@ -296,42 +302,47 @@ fn get_field_index_in_schema(schema: &NamedStruct, field_name: &str) -> Option<u
 
 fn create_named_struct_from_columns(columns: &[ColumnDefinition]) -> NamedStruct {
     let names = columns.iter().map(|col| col.name.clone()).collect();
-    let types = columns.iter().map(|col| {
-        match col.data_type {
-            DataType::Int | DataType::UInt64 => {
-                Type { 
-                    kind: Some(Kind::I64(substrait::proto::r#type::I64::default())) // Assuming I64 has a default implementation
+    let types = columns
+        .iter()
+        .map(|col| {
+            match col.data_type {
+                DataType::Int | DataType::UInt64 => {
+                    Type {
+                        kind: Some(Kind::I64(substrait::proto::r#type::I64::default())), // Assuming I64 has a default implementation
+                    }
                 }
-            },
-            DataType::String => {
-                Type { 
-                    kind: Some(Kind::String(substrait::proto::r#type::String::default())) // Assuming String has a default implementation
+                DataType::String => {
+                    Type {
+                        kind: Some(Kind::String(substrait::proto::r#type::String::default())), // Assuming String has a default implementation
+                    }
                 }
-            },
-            DataType::DateTime => {
-                Type { 
-                    kind: Some(Kind::Timestamp(substrait::proto::r#type::Timestamp::default())) // Assuming Timestamp has a default implementation
+                DataType::DateTime => {
+                    Type {
+                        kind: Some(Kind::Timestamp(
+                            substrait::proto::r#type::Timestamp::default(),
+                        )), // Assuming Timestamp has a default implementation
+                    }
                 }
-            },
-            DataType::Decimal(precision, scale) => {
-                Type { 
-                    kind: Some(Kind::Decimal(substrait::proto::r#type::Decimal { 
-                        precision: precision as i32, 
-                        scale: scale as i32,
-                        ..substrait::proto::r#type::Decimal::default() // Assuming additional fields can be filled with defaults
-                    })) 
+                DataType::Decimal(precision, scale) => {
+                    Type {
+                        kind: Some(Kind::Decimal(substrait::proto::r#type::Decimal {
+                            precision: precision as i32,
+                            scale: scale as i32,
+                            ..substrait::proto::r#type::Decimal::default() // Assuming additional fields can be filled with defaults
+                        })),
+                    }
                 }
-            },
-            // Handle other data types
-        }
-    }).collect();
+                // Handle other data types
+            }
+        })
+        .collect();
 
     NamedStruct {
         names,
         r#struct: Some(Struct {
             types,
             type_variation_reference: 0, // Default for simplicity
-            nullability: 1, // Assuming the whole struct is required
+            nullability: 1,              // Assuming the whole struct is required
         }),
     }
 }
@@ -339,23 +350,21 @@ fn create_named_struct_from_columns(columns: &[ColumnDefinition]) -> NamedStruct
 fn create_table_statement_to_substrait(
     create: &CreateTableStatement,
 ) -> Result<PlanRel, Box<dyn std::error::Error>> {
-
-
     let ddl_rel = Rel {
         rel_type: Some(proto::rel::RelType::Ddl(Box::new(proto::DdlRel {
             table_schema: Some(create_named_struct_from_columns(&create.columns)),
-            object: 1, 
-            op: 1, 
+            object: 1,
+            op: 1,
             write_type: Some(ddl_rel::WriteType::NamedObject(NamedObjectWrite {
                 names: vec![create.table_name.name.clone()],
-                advanced_extension: None
+                advanced_extension: None,
             })),
             ..Default::default()
-        })))
+        }))),
     };
 
-      // Construct the root relation
-      let root_rel = RelRoot {
+    // Construct the root relation
+    let root_rel = RelRoot {
         input: Some(ddl_rel),
         ..Default::default()
     };
