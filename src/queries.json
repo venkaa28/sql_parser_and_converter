@@ -1,217 +1,777 @@
 [
-    {
-        "query": "SELECT COUNT(*) FROM hits;",
-        "expected_ast": {
-            "Select": {
-              "columns": [
-                {
-                  "Function": {
-                    "func": "Count",
-                    "val": "*"
-                  }
-                }
-              ],
-              "from": {
-                "table": {
-                  "name": "hits",
-                  "alias": null
-                }
-              },
-              "join": null,
-              "where_clause": null,
-              "group_by": null,
-              "limit": null,
-              "end_of_statement": ";"
+  {
+    "query": "SELECT COUNT(*) FROM hits;",
+    "expected_ast": {
+      "Select": {
+        "columns": [
+          {
+            "Function": {
+              "func": "Count",
+              "val": "*"
             }
-          },
-        "expected_substrait": ""
+          }
+        ],
+        "from": {
+          "table": {
+            "name": "hits",
+            "alias": null
+          }
+        },
+        "join": null,
+        "where_clause": null,
+        "group_by": null,
+        "limit": null,
+        "end_of_statement": ";"
+      }
     },
-    {
-        "query": "SELECT \"user_id\", COUNT(*) FROM hits WHERE \"clicks\" > 0 GROUP BY \"user_id\";",
-        "expected_ast": {
-            "Select": {
-              "columns": [
-                {
-                  "Name": "user_id"
-                },
-                {
-                  "Function": {
-                    "func": "Count",
-                    "val": "*"
-                  }
-                }
-              ],
-              "from": {
-                "table": {
-                  "name": "hits",
-                  "alias": null
-                }
-              },
-              "join": null,
-              "where_clause": {
-                "condition": {
-                  "GreaterThan": {
-                    "column": {
-                      "Name": "clicks"
-                    },
-                    "value": 0
-                  }
-                }
-              },
-              "group_by": [
-                {
-                  "Name": "user_id"
-                }
-              ],
-              "limit": null,
-              "end_of_statement": ";"
-            }
-          },
-        "expected_substrait": ""
-    },
-    {
-        "query": "SELECT 1, \"URL\" FROM hits LIMIT 10;",
-        "expected_ast": {
-            "Select": {
-              "columns": [
-                {
-                  "Number": 1
-                },
-                {
-                  "Name": "URL"
-                }
-              ],
-              "from": {
-                "table": {
-                  "name": "hits",
-                  "alias": null
-                }
-              },
-              "join": null,
-              "where_clause": null,
-              "group_by": null,
-              "limit": 10,
-              "end_of_statement": ";"
-            }
-          },
-        "expected_substrait": ""
-    },
-    {
-        "query": "INSERT INTO hits SELECT * FROM partial_hits_1 AS p1 JOIN partial_hits_2 AS p2 ON p1.id = p2.id;",
-        "expected_ast": {
-            "Insert": {
-              "target_table": {
-                "name": "hits",
-                "alias": null
-              },
-              "source": {
-                "Select": {
-                  "columns": [
-                    "Star"
+    "expected_substrait": {
+      "extensionUris": [
+        {
+          "extensionUriAnchor": 1,
+          "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_aggregate_generic.yaml"
+        },
+        {
+          "extensionUriAnchor": 2,
+          "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_comparison.yaml"
+        }
+      ],
+      "extensions": [
+        {
+          "extensionFunction": {
+            "extensionUriReference": 1,
+            "functionAnchor": 1,
+            "name": "count"
+          }
+        },
+        {
+          "extensionFunction": {
+            "extensionUriReference": 2,
+            "functionAnchor": 2,
+            "name": "equal"
+          }
+        },
+        {
+          "extensionFunction": {
+            "extensionUriReference": 2,
+            "functionAnchor": 5,
+            "name": "gt"
+          }
+        }
+      ],
+      "relations": [
+        {
+          "root": {
+            "input": {
+              "read": {
+                "baseSchema": {
+                  "names": [
+                    "id",
+                    "timestamp",
+                    "user_id",
+                    "event_type",
+                    "url",
+                    "session_id",
+                    "user_agent",
+                    "country",
+                    "ip",
+                    "referrer",
+                    "clicks",
+                    "impressions",
+                    "revenue"
                   ],
-                  "from": {
-                    "table": {
-                      "name": "partial_hits_1",
-                      "alias": "p1"
-                    }
-                  },
-                  "join": {
-                    "table": {
-                      "name": "partial_hits_2",
-                      "alias": "p2"
-                    },
-                    "condition": {
-                      "EqualTo": {
-                        "val1": {
-                          "Name": "p1.id"
-                        },
-                        "val2": {
-                          "Name": "p2.id"
+                  "struct": {
+                    "types": [
+                      {
+                        "i64": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "timestamp": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "i64": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "string": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "string": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "string": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "string": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "string": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "string": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "string": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "i64": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "i64": {
+                          "nullability": "NULLABILITY_NULLABLE"
+                        }
+                      },
+                      {
+                        "decimal": {
+                          "scale": 2,
+                          "precision": 10,
+                          "nullability": "NULLABILITY_NULLABLE"
                         }
                       }
+                    ],
+                    "nullability": "NULLABILITY_NULLABLE"
+                  }
+                },
+                "namedTable": {
+                  "names": [
+                    "hits"
+                  ]
+                }
+              }
+            },
+            "names": [
+              "count"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "query": "SELECT \"user_id\", COUNT(*) FROM hits WHERE \"clicks\" > 0 GROUP BY \"user_id\";",
+    "expected_ast": {
+      "Select": {
+        "columns": [
+          {
+            "Name": "user_id"
+          },
+          {
+            "Function": {
+              "func": "Count",
+              "val": "*"
+            }
+          }
+        ],
+        "from": {
+          "table": {
+            "name": "hits",
+            "alias": null
+          }
+        },
+        "join": null,
+        "where_clause": {
+          "condition": {
+            "GreaterThan": {
+              "column": {
+                "Name": "clicks"
+              },
+              "value": 0
+            }
+          }
+        },
+        "group_by": [
+          {
+            "Name": "user_id"
+          }
+        ],
+        "limit": null,
+        "end_of_statement": ";"
+      }
+    },
+    "expected_substrait": {
+      "extensionUris": [
+        {
+          "extensionUriAnchor": 1,
+          "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_aggregate_generic.yaml"
+        },
+        {
+          "extensionUriAnchor": 2,
+          "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_comparison.yaml"
+        }
+      ],
+      "extensions": [
+        {
+          "extensionFunction": {
+            "extensionUriReference": 1,
+            "functionAnchor": 1,
+            "name": "count"
+          }
+        },
+        {
+          "extensionFunction": {
+            "extensionUriReference": 2,
+            "functionAnchor": 2,
+            "name": "equal"
+          }
+        },
+        {
+          "extensionFunction": {
+            "extensionUriReference": 2,
+            "functionAnchor": 5,
+            "name": "gt"
+          }
+        }
+      ],
+      "relations": [
+        {
+          "root": {
+            "input": {
+              "aggregate": {
+                "input": {
+                  "filter": {
+                    "input": {
+                      "read": {
+                        "baseSchema": {
+                          "names": [
+                            "id",
+                            "timestamp",
+                            "user_id",
+                            "event_type",
+                            "url",
+                            "session_id",
+                            "user_agent",
+                            "country",
+                            "ip",
+                            "referrer",
+                            "clicks",
+                            "impressions",
+                            "revenue"
+                          ],
+                          "struct": {
+                            "types": [
+                              {
+                                "i64": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "timestamp": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "i64": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "string": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "string": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "string": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "string": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "string": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "string": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "string": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "i64": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "i64": {
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              },
+                              {
+                                "decimal": {
+                                  "scale": 2,
+                                  "precision": 10,
+                                  "nullability": "NULLABILITY_NULLABLE"
+                                }
+                              }
+                            ],
+                            "nullability": "NULLABILITY_NULLABLE"
+                          }
+                        },
+                        "namedTable": {
+                          "names": [
+                            "hits"
+                          ]
+                        }
+                      }
+                    },
+                    "condition": {
+                      "scalarFunction": {
+                        "functionReference": 3,
+                        "arguments": [
+                          {
+                            "value": {
+                              "selection": {
+                                "directReference": {
+                                  "structField": {
+                                    "field": 10
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "value": {
+                              "literal": {
+                                "i32": 0
+                              }
+                            }
+                          }
+                        ]
+                      }
                     }
+                  }
+                },
+                "groupings": [
+                  {
+                    "groupingExpressions": [
+                      {
+                        "selection": {
+                          "directReference": {
+                            "structField": {
+                              "field": 2
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "names": [
+              "user_id",
+              "count"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "query": "SELECT 1, \"URL\" FROM hits LIMIT 10;",
+    "expected_ast": {
+      "Select": {
+        "columns": [
+          {
+            "Number": 1
+          },
+          {
+            "Name": "URL"
+          }
+        ],
+        "from": {
+          "table": {
+            "name": "hits",
+            "alias": null
+          }
+        },
+        "join": null,
+        "where_clause": null,
+        "group_by": null,
+        "limit": 10,
+        "end_of_statement": ";"
+      }
+    },
+    "expected_substrait": {
+      "extensionUris": [
+        {
+          "extensionUriAnchor": 1,
+          "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_aggregate_generic.yaml"
+        },
+        {
+          "extensionUriAnchor": 2,
+          "uri": "https://github.com/substrait-io/substrait/blob/main/extensions/functions_comparison.yaml"
+        }
+      ],
+      "extensions": [
+        {
+          "extensionFunction": {
+            "extensionUriReference": 1,
+            "functionAnchor": 1,
+            "name": "count"
+          }
+        },
+        {
+          "extensionFunction": {
+            "extensionUriReference": 2,
+            "functionAnchor": 2,
+            "name": "equal"
+          }
+        },
+        {
+          "extensionFunction": {
+            "extensionUriReference": 2,
+            "functionAnchor": 5,
+            "name": "gt"
+          }
+        }
+      ],
+      "relations": [
+        {
+          "root": {
+            "input": {
+              "fetch": {
+                "input": {
+                  "read": {
+                    "baseSchema": {
+                      "names": [
+                        "id",
+                        "timestamp",
+                        "user_id",
+                        "event_type",
+                        "url",
+                        "session_id",
+                        "user_agent",
+                        "country",
+                        "ip",
+                        "referrer",
+                        "clicks",
+                        "impressions",
+                        "revenue"
+                      ],
+                      "struct": {
+                        "types": [
+                          {
+                            "i64": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "timestamp": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "i64": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "string": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "string": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "string": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "string": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "string": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "string": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "string": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "i64": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "i64": {
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          },
+                          {
+                            "decimal": {
+                              "scale": 2,
+                              "precision": 10,
+                              "nullability": "NULLABILITY_NULLABLE"
+                            }
+                          }
+                        ],
+                        "nullability": "NULLABILITY_NULLABLE"
+                      }
+                    },
+                    "namedTable": {
+                      "names": [
+                        "hits"
+                      ]
+                    }
+                  }
+                },
+                "count": "10"
+              }
+            },
+            "names": [
+              "1",
+              "URL"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "query": "INSERT INTO hits SELECT * FROM partial_hits_1 AS p1 JOIN partial_hits_2 AS p2 ON p1.id = p2.id;",
+    "expected_ast": {
+      "Insert": {
+        "target_table": {
+          "name": "hits",
+          "alias": null
+        },
+        "source": {
+          "Select": {
+            "columns": [
+              "Star"
+            ],
+            "from": {
+              "table": {
+                "name": "partial_hits_1",
+                "alias": "p1"
+              }
+            },
+            "join": {
+              "table": {
+                "name": "partial_hits_2",
+                "alias": "p2"
+              },
+              "condition": {
+                "EqualTo": {
+                  "val1": {
+                    "Name": "p1.id"
                   },
-                  "where_clause": null,
-                  "group_by": null,
-                  "limit": null,
-                  "end_of_statement": ";"
+                  "val2": {
+                    "Name": "p2.id"
+                  }
+                }
+              }
+            },
+            "where_clause": null,
+            "group_by": null,
+            "limit": null,
+            "end_of_statement": ";"
+          }
+        }
+      }
+    },
+    "expected_substrait": ""
+  },
+  {
+    "query": "CREATE TABLE hits (id UInt64, timestamp DateTime, user_id UInt64, event_type String, url String, session_id String, user_agent String, country String, ip String, referrer String, clicks UInt64, impressions UInt64, revenue Decimal(10, 2)) PRIMARY KEY id;",
+    "expected_ast": {
+      "CreateTable": {
+        "table_name": {
+          "name": "hits",
+          "alias": null
+        },
+        "columns": [
+          {
+            "name": "id",
+            "data_type": "UInt64"
+          },
+          {
+            "name": "timestamp",
+            "data_type": "DateTime"
+          },
+          {
+            "name": "user_id",
+            "data_type": "UInt64"
+          },
+          {
+            "name": "event_type",
+            "data_type": "String"
+          },
+          {
+            "name": "url",
+            "data_type": "String"
+          },
+          {
+            "name": "session_id",
+            "data_type": "String"
+          },
+          {
+            "name": "user_agent",
+            "data_type": "String"
+          },
+          {
+            "name": "country",
+            "data_type": "String"
+          },
+          {
+            "name": "ip",
+            "data_type": "String"
+          },
+          {
+            "name": "referrer",
+            "data_type": "String"
+          },
+          {
+            "name": "clicks",
+            "data_type": "UInt64"
+          },
+          {
+            "name": "impressions",
+            "data_type": "UInt64"
+          },
+          {
+            "name": "revenue",
+            "data_type": {
+              "Decimal": [
+                10,
+                2
+              ]
+            }
+          }
+        ],
+        "primary_key": "id",
+        "end_of_statement": ";"
+      }
+    },
+    "expected_substrait": {
+      "relations": [
+        {
+          "root": {
+            "input": {
+              "ddl": {
+                "tableSchema": {
+                  "names": [
+                    "id",
+                    "timestamp",
+                    "user_id",
+                    "event_type",
+                    "url",
+                    "session_id",
+                    "user_agent",
+                    "country",
+                    "ip",
+                    "referrer",
+                    "clicks",
+                    "impressions",
+                    "revenue"
+                  ],
+                  "struct": {
+                    "types": [
+                      {
+                        "i64": {}
+                      },
+                      {
+                        "timestamp": {}
+                      },
+                      {
+                        "i64": {}
+                      },
+                      {
+                        "string": {}
+                      },
+                      {
+                        "string": {}
+                      },
+                      {
+                        "string": {}
+                      },
+                      {
+                        "string": {}
+                      },
+                      {
+                        "string": {}
+                      },
+                      {
+                        "string": {}
+                      },
+                      {
+                        "string": {}
+                      },
+                      {
+                        "i64": {}
+                      },
+                      {
+                        "i64": {}
+                      },
+                      {
+                        "decimal": {
+                          "scale": 2,
+                          "precision": 10
+                        }
+                      }
+                    ],
+                    "nullability": "NULLABILITY_NULLABLE"
+                  }
+                },
+                "object": "DDL_OBJECT_TABLE",
+                "op": "DDL_OP_CREATE",
+                "namedObject": {
+                  "names": [
+                    "hits"
+                  ]
                 }
               }
             }
-          },
-        "expected_substrait": ""
-    },
-    {
-        "query": "CREATE TABLE hits (id UInt64, timestamp DateTime, user_id UInt64, event_type String, url String, session_id String, user_agent String, country String, ip String, referrer String, clicks UInt64, impressions UInt64, revenue Decimal(10, 2)) PRIMARY KEY id;",
-        "expected_ast": {
-            "CreateTable": {
-              "table_name": {
-                "name": "hits",
-                "alias": null
-              },
-              "columns": [
-                {
-                  "name": "id",
-                  "data_type": "UInt64"
-                },
-                {
-                  "name": "timestamp",
-                  "data_type": "DateTime"
-                },
-                {
-                  "name": "user_id",
-                  "data_type": "UInt64"
-                },
-                {
-                  "name": "event_type",
-                  "data_type": "String"
-                },
-                {
-                  "name": "url",
-                  "data_type": "String"
-                },
-                {
-                  "name": "session_id",
-                  "data_type": "String"
-                },
-                {
-                  "name": "user_agent",
-                  "data_type": "String"
-                },
-                {
-                  "name": "country",
-                  "data_type": "String"
-                },
-                {
-                  "name": "ip",
-                  "data_type": "String"
-                },
-                {
-                  "name": "referrer",
-                  "data_type": "String"
-                },
-                {
-                  "name": "clicks",
-                  "data_type": "UInt64"
-                },
-                {
-                  "name": "impressions",
-                  "data_type": "UInt64"
-                },
-                {
-                  "name": "revenue",
-                  "data_type": {
-                    "Decimal": [
-                      10,
-                      2
-                    ]
-                  }
-                }
-              ],
-              "primary_key": "id",
-              "end_of_statement": ";"
-            }
-          },
-        "expected_substrait": ""
+          }
+        }
+      ]
     }
+  }
 ]

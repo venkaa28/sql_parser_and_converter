@@ -425,7 +425,6 @@ pub fn ast_to_substrait_plan(ast: &Statement) -> Result<Plan, Box<dyn std::error
     match ast {
         Statement::Select(select_stmt) => {
             let plan_rel = select_statement_to_substrait(select_stmt)?;
-
             // Construct the Plan with the RelRoot
             let plan = Plan {
                 relations: vec![plan_rel], // Add the RelRoot to the Plan
