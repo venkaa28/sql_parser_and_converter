@@ -617,7 +617,7 @@
         }
       }
     },
-    "expected_substrait": ""
+    "expected_substrait": {}
   },
   {
     "query": "CREATE TABLE hits (id UInt64, timestamp DateTime, user_id UInt64, event_type String, url String, session_id String, user_agent String, country String, ip String, referrer String, clicks UInt64, impressions UInt64, revenue Decimal(10, 2)) PRIMARY KEY id;",

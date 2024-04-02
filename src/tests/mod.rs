@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::parser;
+    use crate::binder;
     use serde::{Deserialize, Serialize};
     use serde_json::Value;
     use std::fs;
@@ -10,7 +11,7 @@ mod tests {
     struct TestCase {
         query: String,
         expected_ast: Value,
-        expected_substrait: String,
+        expected_substrait: Value,
     }
 
     #[cfg(test)]
@@ -146,4 +147,119 @@ mod tests {
             "Query should have failed to parse, but it succeeded."
         );
     }
+
+    #[test]
+    fn test_string_to_ast_to_substrait_query_1() {
+        let test_cases = load_test_cases();
+
+        let test_case = &test_cases[0];
+
+        match parser::parse_handler(&test_case.query) {
+            Ok((_remaining, ast)) => {
+                match binder::ast_to_substrait_plan(&ast) {
+                    Ok(plan) => {
+                        let plan_json = serde_json::to_value(plan).expect("Failed to serialize AST");
+                        assert_eq!(
+                            plan_json, test_case.expected_substrait,
+                            "Substrait does not match for query: {}",
+                            test_case.query
+                        );
+                    }
+                    Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
+                }
+            }
+            Err(e) => panic!("Failed to parse query: {}\n  {:?}", test_case.query, e),
+        }
+    }
+
+    #[test]
+    fn test_string_to_ast_to_substrait_query_2() {
+        let test_cases = load_test_cases();
+
+        let test_case = &test_cases[1];
+
+        match parser::parse_handler(&test_case.query) {
+            Ok((_remaining, ast)) => {
+                match binder::ast_to_substrait_plan(&ast) {
+                    Ok(plan) => {
+                        let plan_json = serde_json::to_value(plan).expect("Failed to serialize AST");
+                        assert_eq!(
+                            plan_json, test_case.expected_substrait,
+                            "Substrait does not match for query: {}",
+                            test_case.query
+                        );
+                    }
+                    Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
+                }
+            }
+            Err(e) => panic!("Failed to parse query: {}\n  {:?}", test_case.query, e),
+        }
+    }
+
+    #[test]
+    fn test_string_to_ast_to_substrait_query_3() {
+        let test_cases = load_test_cases();
+
+        let test_case = &test_cases[2];
+
+        match parser::parse_handler(&test_case.query) {
+            Ok((_remaining, ast)) => {
+                match binder::ast_to_substrait_plan(&ast) {
+                    Ok(plan) => {
+                        let plan_json = serde_json::to_value(plan).expect("Failed to serialize AST");
+                        assert_eq!(
+                            plan_json, test_case.expected_substrait,
+                            "Substrait does not match for query: {}",
+                            test_case.query
+                        );
+                    }
+                    Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
+                }
+            }
+            Err(e) => panic!("Failed to parse query: {}\n  {:?}", test_case.query, e),
+        }
+    }
+
+    #[test]
+    fn test_string_to_ast_to_substrait_query_4() {
+        let test_cases = load_test_cases();
+    
+        let test_case = &test_cases[3];
+    
+        match parser::parse_handler(&test_case.query) {
+            Ok((_remaining, ast)) => {
+                let result = binder::ast_to_substrait_plan(&ast);
+                assert!(
+                    matches!(result, Err(_)),
+                    "Failed to convert AST to Substrait plan: \"Unsupported AST node type\""
+                );
+            }
+            Err(e) => panic!("Failed to parse query: {}\n  {:?}", test_case.query, e),
+        }
+    }
+
+    #[test]
+    fn test_string_to_ast_to_substrait_query_5() {
+        let test_cases = load_test_cases();
+
+        let test_case = &test_cases[4];
+
+        match parser::parse_handler(&test_case.query) {
+            Ok((_remaining, ast)) => {
+                match binder::ast_to_substrait_plan(&ast) {
+                    Ok(plan) => {
+                        let plan_json = serde_json::to_value(plan).expect("Failed to serialize AST");
+                        assert_eq!(
+                            plan_json, test_case.expected_substrait,
+                            "Substrait does not match for query: {}",
+                            test_case.query
+                        );
+                    }
+                    Err(e) => println!("Failed to convert AST to Substrait plan: {:?}", e),
+                }
+            }
+            Err(e) => panic!("Failed to parse query: {}\n  {:?}", test_case.query, e),
+        }
+    }
+
 }
