@@ -23,3 +23,7 @@ Run the tests:
 ```console
 cargo test
 ```
+Run the Executalbe:
+```console
+./sql_parser_and_converter
+```
